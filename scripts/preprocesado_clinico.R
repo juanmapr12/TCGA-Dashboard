@@ -183,7 +183,6 @@ preprocesado_clinico <- function(df){
     tabla <- table(df$vital_status, df$variable)
     # Aplicamos test Chi-cuadrado considerando las condiciones de Cochran
     chi <- chisq.test(tabla)
-    v <- assocstats(tabla)$cramer
     condicion1 <- mean(chi$expected < 5) <= 0.20
     condicion2 <- all(chi$expected >= 1)
     if(condicion1 & condicion2){
@@ -227,32 +226,9 @@ preprocesado_clinico <- function(df){
   }
   
   
-  comprueba_relaciones <- function(lista_pares_variables, lista){
-    for(i in 1:(length(lista_pares_variables)/2)){
-      var1 <- lista_pares_variables[,i][[1]]
-      var2 <- lista_pares_variables[,i][[2]]
-      v <- assocstats(table(get(var1), get(var2)))$cramer
-      if(!is.nan(v) & v >= 0.5){
-        lista <- append(lista, var1)
-      }
-    }
-    return(lista)
-  }
-  
-  significativas_sin_tiempo_ni_vital_status <- lista_var_signif[-c(1,2)]
-  pares <- combn(significativas_sin_tiempo_ni_vital_status, 2)
-  lista_negra <- list()
-  lista_negra <- unique(comprueba_relaciones(pares, lista_negra))
-  
-  lista_negra <- lista_negra[lista_negra != "vital_status"]
-  
-  # Nos quedamos con la diferencia de las significativas menos las que ya
-  # explican a otras (la "lista negra")
-  lista_var_definitiva <- setdiff(lista_var_signif, lista_negra)
-  
-  df <- df[,unlist(lista_var_definitiva)]
-  
-  return(list(df, unlist(lista_var_definitiva)))
+  ######  Devolvemos resultados finales ######
+  df <- df[,unlist(lista_var_signif)]
+  return(list(df, unlist(lista_var_signif)))
 }
 
 
@@ -266,7 +242,7 @@ analisisUnivariado_Numericas <- function(df, nombre_var){
   mediana   <- median(variable, na.rm = TRUE)
   sd_val    <- sd(variable, na.rm = TRUE)
   rango     <- range(variable, na.rm = TRUE)
-  cuartiles <- quantile(variable, probs = c(0.25, 0.5, 0.75, 0.9), na.rm = TRUE)
+  cuartiles <- quantile(variable, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
   iqr_val   <- IQR(variable, na.rm = TRUE)
   asim      <- skewness(variable, na.rm = TRUE)
   apunt     <- kurtosis(variable, na.rm = TRUE)
@@ -285,7 +261,6 @@ analisisUnivariado_Numericas <- function(df, nombre_var){
   cat(sprintf("  Q1 (25%%):  %.2f\n", cuartiles[1]))
   cat(sprintf("  Q2 (50%%):  %.2f\n", cuartiles[2]))
   cat(sprintf("  Q3 (75%%):  %.2f\n", cuartiles[3]))
-  cat(sprintf("  90%%:       %.2f\n", cuartiles[4]))
   
 }
 

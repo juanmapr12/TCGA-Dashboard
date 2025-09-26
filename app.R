@@ -104,7 +104,7 @@ ui <- dashboardPage(
                               ), select = "TCGA-HNSC", selectize = TRUE
                   ),
                   tags$div(style = "text-align: center;",
-                    helpText("Recuerde que puede buscar el proyecto que desee borrando y escribiendo su nombre dentro de la propia barra de búsqueda."),
+                    helpText("Recuerde que puede buscar el proyecto que desee borrando y escribiendo su nombre dentro de la propia barra de búsqueda.")
                   ),
                   selectInput("data_type", "Seleccione un tipo de datos:",
                               choices = c("miRNAs", "Clinical")),
@@ -119,7 +119,7 @@ ui <- dashboardPage(
                   title = "Aviso",
                   status = "warning",
                   solidHeader = TRUE,
-                  helpText(tags$strong("Los archivos del proyecto se almacenan en local (carpeta metadatos). Por tanto, mientras más archivos contenga el proyecto más grande será la espera, por tanto se ruega que sea paciente. Si éste ya viene descargado (como el del caso de prueba que se da, el TCGA-HNSC) no será necesario descargar nada adicional."))
+                  helpText(tags$strong("Los archivos del proyecto se almacenan en local (carpeta metadatos). Por tanto, mientras más archivos contenga el proyecto más grande será la espera, por lo que le pedimos paciencia si la barra de progreso queda estancada. Si éste ya viene descargado (como el del caso de prueba que se da, el TCGA-HNSC) no será necesario descargar nada adicional."))
                 ),
                 
                 box(
@@ -160,14 +160,14 @@ ui <- dashboardPage(
                       label = "Establezca un porcentaje máximo de pacientes a los que se les permite que las expresiones del microARN sean un valor nulo",
                       value = 10, min = 0, max = 20, step = 1
                     ),
-                    helpText("Es decir, si se escoge el 10% (valor establecido por defecto) quiere decir que se rechazarán los microARN cuyas expresiones o conteos en la totalidad de pacientes superan el 10% de valores nulos. Se recomienda no superar el 20% para evitar introducir sesgos en la posterior imputación de los valores NA."),
+                    helpText("Es decir, si se escoge el 10% (valor establecido por defecto) quiere decir que se rechazarán los microARN cuyas expresiones o conteos en la totalidad de pacientes superan el 10% de valores nulos. Se recomienda no superar el 20% para evitar introducir sesgos en la posterior imputación de estos valores."),
                     numericInput(
                       inputId = "valor_varianza",
                       label = "Establezca un valor mínimo de la varianza a superar por cada microARN",
                       value = 0.5, min = 0, max = 500, step = 0.1
                     )
                   ),
-                  helpText("Por último, se imputan los valores de expresión nulos resultantes mediante la función impute.knn del proyecto Bioconductor"),
+                  helpText("Por último, se imputan los valores de expresión nulos resultantes mediante la función impute.knn del proyecto Bioconductor."),
                   tags$div(style = "text-align: center;",
                            actionButton(
                              inputId = "preprocesado_mirnas",
@@ -233,28 +233,24 @@ ui <- dashboardPage(
               
               fluidRow(
                 box(
-                  width = 4, title = "Opciones para el Volcano Plot", status = "primary", solidHeader = TRUE,
-                  radioButtons(
-                    inputId = "comparacion",
-                    label = "Seleccione el análisis que le gustaría realizar:",
-                    choices = list("Vivo vs muerto", "Sano vs enfermo")
-                  ),
+                  width = 4, title = "Opciones para el análisis", status = "primary", solidHeader = TRUE,
+                  helpText("Análisis de Expresión Diferencial para los grupos de muestras Sano vs Enfermo. Se permite modificar los siguientes valores:"),
                   radioButtons(
                     inputId = "muestras",
-                    label = "¿Qué conjunto de muestras desea utilizar para el análisis? (sólo para Sano vs enfermo)",
+                    label = "¿Qué conjunto de muestras desea utilizar para el análisis?",
                     choices = list("Totales", "Pareadas")
                   ),
                   numericInput(
                     inputId = "logFC",
-                    label = "Establezca el valor mínimo del log Fold Change en valor absoluto",
-                    value = 0.5, min = 0, max = 5, step = 0.1
+                    label = "Establezca el valor mínimo del logaritmo en base 2 del Fold Change, expresado en valor absoluto",
+                    value = 1.5, min = 0, max = 5, step = 0.1
                   ),
                   numericInput(
                     inputId = "p_valor_adj",
-                    label = "Establezca el menos logaritmo en base 10 del p-valor ajustado",
-                    value = 3, min = 0, max = 1000, step = 1
+                    label = "Establezca el p-valor ajustado, que se calcula aplicando el menos logaritmo en base 10 al p-valor",
+                    value = 9, min = 0, max = 1000, step = 1
                   ),
-                  helpText("Para ayudarle en los cálculos, x correspondería con un p-valor ajustado de 1e-x"),
+                  helpText("Para ayudarle en los cálculos, el p-valor ajustado x correspondería con un p-valor de 1e-x"),
                   tags$div(style = "text-align: center;",
                            actionButton(
                              inputId = "analisis_dea",
@@ -271,7 +267,8 @@ ui <- dashboardPage(
                                       height = "500px",
                                       width = "100%")
                   ),
-                  tabPanel("Tabla de microARNs que cumplen ambos filtros",
+                  tabPanel("Tabla de microARN diferencialmente expresados (los de color rojo)",
+                          helpText(tags$strong("Recuerde que estos microARN son los que se utilizarán para análisis y modelos posteriores.")),
                           DT::dataTableOutput("mirnas_filtrados")
                   )
                 )
@@ -284,6 +281,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(
                   width = 4, title = "Parámetros modelo de Cox", status = "primary", solidHeader = TRUE,
+                  helpText("Se buscará realizar un análisis para cada microARN de forma individual, comprobando si sus valores de expresión influyen en la supervivencia."),
                   numericInput(
                     inputId = "p_valor",
                     label = "Establezca el p-valor a usar",
@@ -737,8 +735,7 @@ server <- function(input, output, session) {
   output$pre_clinico_seleccion <- renderUI({
     texto_principal <- "Se ha optado por una selección de características manual. En ella se consideran los siguientes aspectos:"
     elementos <-  c("De todas las columnas clínicas se eliminan las que tengan un porcentaje elevado de valores faltantes. Se ha escogido el 60% como umbral inferior.",
-                    "Después se filtran aquellas que tengan relación con la que se considera la variable objetivo, el estado vital del paciente. La relación se comprueba a partir de test paramétricos, no paramétricos o de independencia. Si ésta es estadísticamente significativa (p-valor menor que 0.05) se selecciona la columna.",
-                    "Por último, de las columnas resultantes se comprueba si alguna está fuertemente relacionada con otra mediante la prueba V de Cramer. Si fuese el caso se procede a eliminar una de ellas, buscando evitar así la multicolinealidad.")
+                    "Después se filtran aquellas que tengan relación con la que se considera la variable objetivo, el estado vital del paciente. La relación se comprueba a partir de test paramétricos, no paramétricos o de independencia. Si ésta es estadísticamente significativa (p-valor menor que 0.05) se selecciona la columna.")
       
     HTML(paste0(
       "<p> <strong>", texto_principal, "</strong> </p>",
@@ -839,7 +836,6 @@ server <- function(input, output, session) {
     )
     analisis_expr_dif(
       muestras_escogidas = input$muestras,
-      comparacion = input$comparacion,
       df = df_resultado_pre_mirnas(),
       df_completo = df_conjunto()
     )
@@ -919,6 +915,22 @@ server <- function(input, output, session) {
     )[[2]]
   })
   
+  num_mirnas_filtrados <- eventReactive(input$analisis_cox, {
+    validate(
+      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    mirnas_modelo_cox(
+      p_value = input$p_valor,
+      hazard_ratio_inferior = input$minHR,
+      hazard_ratio_superior = input$maxHR,
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      df_completo = df_conjunto()
+    )[[3]]
+  })
+  
   observeEvent(input$analisis_cox, {
     
     validate(
@@ -939,7 +951,7 @@ server <- function(input, output, session) {
   
   output$mirnas <- renderUI({
     selectInput("columna",
-                "Seleccione uno de los microARN",
+                paste("Seleccione uno de los", num_mirnas_filtrados(), "microARN obtenidos"),
                 choices = resultados_cox()
     )
   })

@@ -23,6 +23,7 @@ merge_MIR <- function(metadata, fdir){
   }
   rownames(combined_df) <- combined_df$miRNA_ID
   combined_df <- combined_df[,-which(names(combined_df) %in% "miRNA_ID")]
+  
   return(combined_df)
 }
 
@@ -62,6 +63,7 @@ preprocesado_mirnas <- function(df, project, porcentaje_max_nulos,
   expresiones_mirna_traspuesto <- t(expr_mirnas_tras_filtros)
   expr_mirnas_tras_filtros <- t(impute.knn(as.matrix(expresiones_mirna_traspuesto))$data)
   
+
   return(expr_mirnas_tras_filtros)
 }
 

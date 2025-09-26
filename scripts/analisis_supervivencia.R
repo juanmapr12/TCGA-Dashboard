@@ -64,7 +64,7 @@ mirnas_modelo_cox <- function(p_value,
       vector_hr <- c(vector_hr, hr_cox)
     }
   }
-  return(list(vector_mirnas, vector_hr))
+  return(list(vector_mirnas, vector_hr, length(vector_mirnas)))
 }
 
 
@@ -84,6 +84,8 @@ curva_kaplan_meier <- function(lista_mirnas, lista_hr, mirna_escogido, df_comple
       ifelse(expr_mirnas[,1] >= median(expr_mirnas[,1]),
              "Expresión alta", "Expresión baja")
   }
+  
+  print(datos_supervivencia_mirnas$group)
   
   curva <- survfit(Surv(time, vital_status) ~ group,
                    data = datos_supervivencia_mirnas, 

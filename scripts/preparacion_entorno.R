@@ -5,11 +5,11 @@ if (!require("BiocManager", quietly = TRUE)){
   BiocManager::install('GDCRNATools')
   BiocManager::install('impute')
   BiocManager::install('EnhancedVolcano')
-  #BiocManager::install('Limma')
-  #BiocManager::install("multiMiR")
-  #BiocManager::install("clusterProfiler")
-  #BiocManager::install("org.Hs.eg.db")       # Anotación para humano
-  #BiocManager::install("enrichplot")         # Para visualizaciones
+  BiocManager::install('Limma')
+  BiocManager::install("multiMiR")
+  BiocManager::install("clusterProfiler")
+  BiocManager::install("org.Hs.eg.db")
+  BiocManager::install("enrichplot")
 }
 library(GDCRNATools)
 library(impute)
