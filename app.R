@@ -13,7 +13,7 @@ source("scripts/preprocesado_mirnas.R")
 source("scripts/analisis_expr_dif.R")
 source("scripts/datos_combinados.R")
 source("scripts/analisis_supervivencia.R")
-source("scripts/genes_diana.R")
+source("scripts/enriquecimiento.R")
 source("scripts/clustering.R")
 source("scripts/clasificacion_ML.R")
 
@@ -214,7 +214,7 @@ ui <- dashboardPage(
                 tabBox(
                   width = 7, side = "left",
                   tabPanel(
-                    "Gráfica resultante de la relación",
+                    "Diagrama de barras resultante de la relación",
                     plotOutput("grafica_pre_clinico")
                   ),
                   tabPanel(
@@ -262,7 +262,7 @@ ui <- dashboardPage(
                 
                 tabBox(
                   width = 8, side = "left",
-                  tabPanel("Gráfica resultante", 
+                  tabPanel("Resultados Volcano Plot", 
                            plotOutput("volcano_plot",
                                       height = "500px",
                                       width = "100%")
@@ -281,7 +281,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(
                   width = 4, title = "Parámetros modelo de Cox", status = "primary", solidHeader = TRUE,
-                  helpText("Se buscará realizar un análisis para cada microARN de forma individual, comprobando si sus valores de expresión influyen en la supervivencia."),
+                  helpText("Se buscará realizar un análisis para cada microARN de forma individual, comprobando si sus valores de expresión transformados en logaritmo en base 2 influyen en la supervivencia."),
                   numericInput(
                     inputId = "p_valor",
                     label = "Establezca el p-valor a usar",
@@ -312,16 +312,24 @@ ui <- dashboardPage(
                   )
                 ),
                 
-                box(
-                  width = 8, title = "Lista de miARN filtrados", status = "info", solidHeader = TRUE,
-                  uiOutput("mirnas")
-                ),
-                
-                box(
-                  width = 8, title = "Resultados", status = "success", solidHeader = TRUE,
-                  plotOutput("kaplan_meier",
-                             height = "500px",
-                             width = "100%")
+                tabBox(
+                  width = 8, side = "left",
+                  tabPanel("Curva Kaplan-Meier",
+                           fluidRow(
+                             column(12, 
+                                    tags$div(class = "center-col", 
+                                      uiOutput("mirnas_supervivencia"),
+                                      plotOutput("kaplan_meier",
+                                                 height = "500px",
+                                                 width = "100%")
+                                            )
+                                    )
+                           )
+                  ),
+                  tabPanel("Tabla de microARN escogidos tras el análisis",
+                           helpText(tags$strong("Recuerde que estos microARN son los que se utilizarán para análisis y modelos posteriores.")),
+                           DT::dataTableOutput("tabla_mirnas_supervivencia")
+                  )
                 )
               )
       ),
@@ -330,61 +338,73 @@ ui <- dashboardPage(
       #### Análisis de enriquecimiento [genes diana] (ui) ####
       
       tabItem(tabName = "enrich",
-              
               fluidRow(
                 tabBox(
                   width = 5, side = "left",
                   tabPanel(
-                    "Genes diana",
-                    radioButtons(
-                      inputId = "mirna_genes",
-                      label = "Seleccione los microARN a los que desea obtener sus genes diana:",
-                      choices = list("Los resultantes tras Expresión diferencial", "Los resultantes tras Análisis de supervivencia", "La unión de ambos"),
-                      selected = "La unión de ambos"
-                    ),
-                    radioButtons(
-                      inputId = "tipo_info",
-                      label = "Escoja el tipo de información que le gustaría obtener de la base de datos:",
-                      choices = list("Interacciones validadas experimentalmente", "Predicciones computacionales", "Ambas")
-                    ),
-                    uiOutput("siguiente_seccion")
+                    width = 12,
+                    title = "Genes diana",
+                    fluidRow(
+                      column(12, 
+                           div(class="center-col",
+                               radioButtons(
+                                 inputId = "mirna_genes",
+                                 label = "Seleccione los microARN de los que desea obtener sus genes diana:",
+                                 choices = list("Los resultantes tras Expresión Diferencial", "Los resultantes tras Análisis de Supervivencia", "La unión de ambos"),
+                                 selected = "La unión de ambos"
+                               ),
+                               radioButtons(
+                                   inputId = "tipo_info",
+                                   label = "Escoja el tipo de información que le gustaría obtener de la base de datos:",
+                                   choices = list("Interacciones validadas experimentalmente", "Predicciones computacionales", "Ambas"),
+                                   selected = "Ambas"
+                               ),
+                               uiOutput("siguiente_seccion"))
+                           )
+                    )
                   ),
                   tabPanel(
-                    "Análisis de enriquecimiento",
-                    radioButtons(
-                      inputId = "tipo_enrich",
-                      label = "Escoja el tipo de análisis:",
-                      choices = list("GO","KEGG")
-                    ),
-                    numericInput(
-                      inputId = "p_valor_enrich",
-                      label = "Seleccione el p-valor",
-                      value = 0.05, min = 0, max = 1, step = 0.01
-                    ),
-                    numericInput(
-                      inputId = "q_valor_enrich",
-                      label = "Seleccione el q-valor o p-valor ajustado",
-                      value = 0.2, min = 0, max = 1, step = 0.01
-                    ),
-                    selectInput(
-                      inputId = "ont_enrich",
-                      label = "Seleccione la ontología (sólo para GO)",
-                      choices = list("Proceso biológico", 
-                                     "Función molecular",
-                                     "Componente celular"), 
-                      selected = "Proceso biológico"
-                    ),
-                    numericInput(
-                      inputId = "max_categorias",
-                      label = "¿Cuántas categorías desea visualizar?",
-                      value = 10, min = 1, max = 15, step = 1
-                    ),
-                    tags$div(style = "text-align: center;",
-                             actionButton(
-                               inputId = "enrich_analysis",
-                               label = "Ejecutar análisis",
-                               style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
-                             )
+                    title = "Análisis de enriquecimiento",
+                    fluidRow(
+                      column(12, 
+                             div(class = "center-col",
+                               radioButtons(
+                                 inputId = "tipo_enrich",
+                                 label = "Escoja el tipo de análisis:",
+                                 choices = list("GO","KEGG")
+                               ),
+                               numericInput(
+                                 inputId = "p_valor_enrich",
+                                 label = "Seleccione el p-valor",
+                                 value = 0.05, min = 0, max = 1, step = 0.01
+                               ),
+                               numericInput(
+                                 inputId = "q_valor_enrich",
+                                 label = "Seleccione el q-valor o p-valor ajustado",
+                                 value = 0.2, min = 0, max = 1, step = 0.01
+                               ),
+                               radioButtons(
+                                 inputId = "ont_enrich",
+                                 label = "Seleccione la ontología (sólo para GO)",
+                                 choices = list("Proceso biológico", 
+                                                "Función molecular",
+                                                "Componente celular"), 
+                                 selected = "Proceso biológico"
+                               ),
+                               numericInput(
+                                 inputId = "max_categorias",
+                                 label = "¿Cuántas categorías desea visualizar?",
+                                 value = 10, min = 1, max = 15, step = 1
+                               ),
+                               tags$div(style = "text-align: center;",
+                                        actionButton(
+                                          inputId = "enrich_analysis",
+                                          label = "Ejecutar análisis",
+                                          style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
+                                        )
+                                      )
+                                )
+                        )
                     )
                   )
                 ),
@@ -392,7 +412,7 @@ ui <- dashboardPage(
                   width = 7, title = "Resultados",
                   status = "success", solidHeader = TRUE,
                   plotOutput("enrich_barras",
-                             height = "500px",
+                             height = "600px",
                              width = "100%")
                 )
               )
@@ -411,10 +431,10 @@ ui <- dashboardPage(
                     fluidRow(
                       column(4, 
                              div(class = "center-col",
-                                 radioButtons(
+                                 selectInput(
                                    inputId = "mirnas_escogidos",
-                                   label = "Seleccione el conjunto de microARN a usar para su agrupación",
-                                   choices = list("microARN resultantes de los análisis de Expresión y Supervivencia", "microARN con más variabilidad (ordenados de mayor a menor según coeficiente de variación)")
+                                   label = "Seleccione el conjunto de microARN a usar ",
+                                   choices = list("microARN tras Expresión Diferencial", "microARN tras Supervivencia", "microARN tras Expresión Diferencial y Supervivencia", "microARN con más variabilidad (ordenados de mayor a menor según coeficiente de variación)")
                                  )
                              )
                       ),
@@ -457,7 +477,7 @@ ui <- dashboardPage(
                                  sliderInput(
                                    inputId = "k_clustering",
                                    label = "Establezca el número de clústeres que desea formar",
-                                   value = 4, min = 2, max = 6, step = 1
+                                   value = 4, min = 2, max = 10, step = 1
                                  )
                              )
                       ),
@@ -633,7 +653,7 @@ server <- function(input, output, session) {
     
     if(file.exists(file_name_cli) & file.exists(file_name_cli)){
       items <- c(paste("Clínicos: ", proyecto()),
-                 paste("Expresiones de miRNA o miARN: ", proyecto())
+                 paste("Expresiones de microARN: ", proyecto())
       )
     }else if(!file.exists(file_name_cli)){
       shinyalert(
@@ -641,14 +661,14 @@ server <- function(input, output, session) {
         text = paste("Faltan los datos clínicos del proyecto", proyecto(), ". Si quiere usar todas las funcionalidades de la aplicación, se recomienda que los descargue."),
         type = "warning"
       )
-      items <- c("Clínicos: Faltan", paste("Expresiones de miRNA o miARN: ", proyecto()))
+      items <- c("Clínicos: Faltan", paste("Expresiones de microARN: ", proyecto()))
     }else{
       shinyalert(
         title = "¡Atención!",
         text = paste("Faltan los datos de expresiones de microARN del proyecto", proyecto(), ". Si quiere usar todas las funcionalidades de la aplicación, se recomienda que los descargue."),
         type = "warning"
       )
-      items <- c(paste("Clínicos: ", proyecto()), "Expresiones de miRNA o miARN: Faltan")
+      items <- c(paste("Clínicos: ", proyecto()), "Expresiones de microARN: Faltan")
     }
     HTML(paste0(
       "<strong>", titulo, "</strong>",  # título en negrita
@@ -873,7 +893,7 @@ server <- function(input, output, session) {
     resultados_dea_tras_filtro()
   }, options = list(
       pageLength = 10,        # número de filas visibles
-      scrollY = "400px",      # altura fija
+      scrollY = "500px",      # altura fija
       scrollCollapse = TRUE,  # que no genere espacio extra si hay pocas filas
       scrollX = TRUE          # scroll horizontal
   ))
@@ -899,7 +919,7 @@ server <- function(input, output, session) {
     )[[1]]
   })
   
-  hr_cox <- eventReactive(input$analisis_cox, {
+  pvalor_cox <- eventReactive(input$analisis_cox, {
     validate(
       need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
     )
@@ -915,7 +935,7 @@ server <- function(input, output, session) {
     )[[2]]
   })
   
-  num_mirnas_filtrados <- eventReactive(input$analisis_cox, {
+  hr_cox <- eventReactive(input$analisis_cox, {
     validate(
       need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
     )
@@ -929,6 +949,22 @@ server <- function(input, output, session) {
       df_mirnas = df_resultado_pre_mirnas_filtrado(),
       df_completo = df_conjunto()
     )[[3]]
+  })
+  
+  num_mirnas_filtrados <- eventReactive(input$analisis_cox, {
+    validate(
+      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    mirnas_modelo_cox(
+      p_value = input$p_valor,
+      hazard_ratio_inferior = input$minHR,
+      hazard_ratio_superior = input$maxHR,
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      df_completo = df_conjunto()
+    )[[4]]
   })
   
   observeEvent(input$analisis_cox, {
@@ -949,26 +985,44 @@ server <- function(input, output, session) {
     }
   })
   
-  output$mirnas <- renderUI({
-    selectInput("columna",
+  output$mirnas_supervivencia <- renderUI({
+    selectInput("columna_mirnas_supervivencia",
                 paste("Seleccione uno de los", num_mirnas_filtrados(), "microARN obtenidos"),
                 choices = resultados_cox()
     )
   })
   
-  grafica_mirna <- reactive({
+  grafica_km_mirnas <- reactive({
     curva_kaplan_meier(
       lista_mirnas = resultados_cox(),
       lista_hr = hr_cox(),
-      mirna_escogido = input$columna,
+      mirna_escogido = input$columna_mirnas_supervivencia,
       df_completo = df_conjunto()
     )
   })
   
   output$kaplan_meier <- renderPlot({
-    req(input$columna)
-    grafica_mirna()
+    req(input$columna_mirnas_supervivencia)
+    grafica_km_mirnas()
   })
+  
+  tabla_mirnas_supervivencia <- reactive({
+    datos_modelo_tras_cox(
+      lista_mirnas = resultados_cox(),
+      lista_pvalor = pvalor_cox(),
+      lista_hr = hr_cox()
+    )
+  })
+  
+  output$tabla_mirnas_supervivencia <- DT::renderDataTable({
+    req(input$columna_mirnas_supervivencia)
+    tabla_mirnas_supervivencia()
+  }, options = list(
+    pageLength = 10,        # número de filas visibles
+    scrollY = "500px",      # altura fija
+    scrollCollapse = TRUE,  # que no genere espacio extra si hay pocas filas
+    scrollX = TRUE          # scroll horizontal
+  ))
   
   
   #### Análisis de enriquecimiento [genes diana] (server) ####
@@ -1087,6 +1141,8 @@ server <- function(input, output, session) {
       df_mirnas = df_resultado_pre_mirnas_filtrado(),
       df_completo = df_conjunto(),
       tipo = input$mirnas_escogidos,
+      dea = rownames(resultados_dea_tras_filtro()),
+      cox = resultados_cox(),
       dea_y_cox = union_mirnas(),
       N = input$num_mirnas,
       metodo_jerarquico = input$jerarquia
@@ -1120,7 +1176,7 @@ server <- function(input, output, session) {
   
   output$parametro_clinicos_cluster <- renderUI({
     fluidRow(
-      column(3, 
+      column(4, 
              div(class = "center-col",
                  selectInput(
                    inputId = "num_cluster_selecc",
@@ -1130,7 +1186,7 @@ server <- function(input, output, session) {
                  )
              )
       ),
-      column(3,
+      column(4,
              div(class = "center-col",
                  radioButtons(
                    inputId = "tipo_regulated",
@@ -1139,24 +1195,16 @@ server <- function(input, output, session) {
                  )
              )
       ),
-      column(3,
+      column(4,
              div(class = "center-col",
                  numericInput(
                    inputId = "limite_selecc",
-                   label = "Establezca el número de muestras donde los microARN del clúster escogido se encuentran diferencialmente expresados según el criterio de la izquierda",
+                   label = "Establezca el número de muestras con el que desea realizar el análisis univariado",
                    value = 5, min = 1, max = 50, step = 1
                  )
              )
-      ),
-      column(3, 
-             div(class = "center-col",
-                 selectInput(
-                   inputId = "columna_selecc",
-                   label = "Seleccione la columna clínica que desee visualizar",
-                   choices = c("tipo_muestra", lista_signif())
-                 )
-             )
       )
+      # donde los microARN del clúster escogido se encuentran diferencialmente expresados según el criterio de la izquierda
     )
   })
   
@@ -1165,19 +1213,28 @@ server <- function(input, output, session) {
       tabBox(
         width = 12, side = "left",
         tabPanel(
-          "Tabla microARNs",
+          "Tabla de microARN",
           div(style = "margin-top: 30px;",
               DT::dataTableOutput("mirnas_cluster")
           )
         ),
         tabPanel(
-          "Tabla variables clínicas",
+          "Tabla con las variables clínicas",
           div(style = "margin-top: 30px;",
               DT::dataTableOutput("variables_clinicas_cluster")
           )
         ),
         tabPanel(
-          "Análisis de la variable clínica seleccionada para el clúster",
+          "Análisis univariado de variables clínicas",
+          column(12, 
+                 div(class = "center-col",
+                     selectInput(
+                       inputId = "columna_selecc",
+                       label = "Seleccione la columna clínica que desee visualizar dentro del análisis",
+                       choices = c("tipo_muestra", lista_signif())
+                     )
+                 )
+          ),
           plotOutput("analisis_univariado_cluster")
         )
       )
@@ -1227,14 +1284,14 @@ server <- function(input, output, session) {
     pageLength = 10,        # número de filas visibles
     scrollY = "800px",      # altura fija
     scrollCollapse = TRUE,  # que no genere espacio extra si hay pocas filas
-    scrollX = TRUE,          # scroll horizontal
+    scrollX = TRUE,         # scroll horizontal
     fixedColumns = list(leftColumns = 1)
   ))
   
   output$variables_clinicas_cluster <- renderDataTable({
     tabla_clinicas_cluster()
   }, options = list(
-    pageLength = 5,        # número de filas visibles
+    pageLength = 4,        # número de filas visibles
     scrollY = "600px",      # altura fija
     scrollCollapse = TRUE,  # que no genere espacio extra si hay pocas filas
     scrollX = TRUE,          # scroll horizontal

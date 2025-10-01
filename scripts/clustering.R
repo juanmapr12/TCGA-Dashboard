@@ -1,7 +1,11 @@
 
-clustering_dendrograma <- function(df_mirnas, df_completo, tipo, dea_y_cox, N, metodo_jerarquico){
+clustering_dendrograma <- function(df_mirnas, df_completo, tipo, dea, cox, dea_y_cox, N, metodo_jerarquico){
   
-  if(tipo == "microARN resultantes de los análisis de Expresión y Supervivencia"){
+  if(tipo == "microARN tras Expresión Diferencial"){
+    mirnas_seleccionados <- t(df_completo[,dea])
+  }else if(tipo == "microARN tras Supervivencia"){
+    mirnas_seleccionados <- t(df_completo[,cox])
+  }else if(tipo == "microARN tras Expresión Diferencial y Supervivencia"){
     mirnas_seleccionados <- t(df_completo[,dea_y_cox])
   }else{
     media_mirnas <- apply(df_mirnas, 1, mean)
@@ -60,7 +64,7 @@ tabla_de_datos_por_cada_cluster <- function(df_mirnas, agrupamiento_mirnas, clus
   }
   muestras_top_expresion <- names(expresiones_mirna_ordenadas)[1:limite]
   
-  resultado_mirnas <- df_completo[muestras_top_expresion, mirnas_del_cluster]
+  resultado_mirnas <- t(df_completo[muestras_top_expresion, mirnas_del_cluster])
   resultado_clinico <- df_completo[muestras_top_expresion, vector_columnas]
   
   return(list(resultado_mirnas, 

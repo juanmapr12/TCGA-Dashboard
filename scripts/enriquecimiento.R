@@ -1,6 +1,5 @@
 ##### Genes diana #####
 
-
 resultados_genes_diana <- function(mirnas_seleccionados, tipo_datos){
   
   valor <- switch(
@@ -20,7 +19,6 @@ resultados_genes_diana <- function(mirnas_seleccionados, tipo_datos){
 
 
 ##### Análisis de enriquecimiento #####
-
 
 analisis_enriquecimiento <- function(genes_diana, tipo_analisis, p_valor, q_valor, ontologia){
   

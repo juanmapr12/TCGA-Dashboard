@@ -15,15 +15,18 @@ lista_columnas_categoricas_ordinales <-
     "pathologic_stage",
     "pathologic_T",
     "pathologic_M",
-    "pathologic_N",
-    "tumor_event_after_treatment_no",
+    "pathologic_N")
+
+lista_columnas_numericas_discretas <- 
+  c("tumor_event_after_treatment_no",
     "tumor_event_after_treatment_yes",
     "additional_pharmaceutical_therapy_yes",
     "additional_radiation_therapy_yes")
 
 
-lista_columnas_categoricas <- c(lista_columnas_categoricas_nominales,
-                                 lista_columnas_categoricas_ordinales)
+lista_columnas_categoricas_o_discretas <- c(lista_columnas_categoricas_nominales,
+                                            lista_columnas_categoricas_ordinales,
+                                            lista_columnas_numericas_discretas)
 
 
 preprocesado_clinico <- function(df){
@@ -215,11 +218,11 @@ preprocesado_clinico <- function(df){
   
   ####### Bucle variables categóricas #######
   
-  for(i in 1:length(lista_columnas_categoricas)){
-    if(lista_columnas_categoricas[i] %in% lista_variables){
-      nombre <- lista_columnas_categoricas[i]
+  for(i in 1:length(lista_columnas_categoricas_o_discretas)){
+    if(lista_columnas_categoricas_o_discretas[i] %in% lista_variables){
+      nombre <- lista_columnas_categoricas_o_discretas[i]
       df <- convierte_aCategorica(nombre)
-      if(!lista_columnas_categoricas[i] %in% c("vital_status","time"))
+      if(!lista_columnas_categoricas_o_discretas[i] %in% c("vital_status","time"))
         lista_var_signif <- append(lista_var_signif,
                                    testCategoricas_VariablesAsociadas(nombre))
     }
@@ -289,7 +292,7 @@ resultadoBivariado_Categoricas <- function(df, col){
 
 
 grafica_relacion_vitalstatus <- function(df, col){
-  if(col %in% lista_columnas_categoricas){
+  if(col %in% lista_columnas_categoricas_o_discretas){
     resultadoBivariado_Categoricas(df, col)
   }else if(col %in% lista_columnas_numericas){
     resultadoBivariado_Numericas(df, col)
@@ -297,7 +300,7 @@ grafica_relacion_vitalstatus <- function(df, col){
 }
 
 datos_analisis_univariado <- function(df, col){
-  if(col %in% lista_columnas_categoricas){
+  if(col %in% lista_columnas_categoricas_o_discretas){
     analisisUnivariado_Categoricas(df, col)
   }else if(col %in% lista_columnas_numericas){
     analisisUnivariado_Numericas(df, col)
