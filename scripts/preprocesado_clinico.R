@@ -1,11 +1,46 @@
 
 lista_columnas_numericas <- c("age",
-                              "time")
+                              "time",
+                              "days_to_birth",
+                              "days_to_initial_pathologic_diagnosis",
+                              "year_of_initial_pathologic_diagnosis",
+                              "days_to_psa",
+                              "number_of_lymphnodes_positive_by_he",
+                              "number_of_lymphnodes_positive_by_ihc",
+                              "lymph_node_examined_count",
+                              "number_pack_years_smoked")
 
-lista_columnas_categoricas_nominales <- c("ethnicity",
-                                           "gender",
-                                           "race",
-                                           "vital_status")
+lista_columnas_categoricas_nominales <- 
+  c("ethnicity",
+    "gender",
+    "race",
+    "vital_status",
+    "tumor_tissue_site",
+    "tissue_prospective_collection_indicator",
+    "tissue_retrospective_collection_indicator",
+    "informed_consent_verified",
+    "icd_o_3_site",
+    "icd_o_3_histology",
+    "icd_10",
+    "person_neoplasm_cancer_status",
+    "anatomic_neoplasm_subdivision",
+    "laterality",
+    "primary_lymph_node_presentation_assessment",
+    "margin_status",
+    "lymphovascular_invasion_present",
+    "perineural_invasion_present",
+    "alcohol_history_documented",
+    "frequency_of_alcohol_consumption",
+    "amount_of_alcohol_consumption_per_day",
+    "radiation_therapy",
+    "postoperative_rx_tx",
+    "primary_therapy_outcome_success",
+    "system_version",
+    "b_symptoms",
+    "extranodal_involvement",
+    "serum_markers",
+    "igcccg_stage",
+    "masaoka_stage")
 
 lista_columnas_categoricas_ordinales <- 
   c("clinical_stage",
@@ -15,13 +50,21 @@ lista_columnas_categoricas_ordinales <-
     "pathologic_stage",
     "pathologic_T",
     "pathologic_M",
-    "pathologic_N")
+    "pathologic_N",
+    "neoplasm_histologic_grade",
+    "gleason_score",
+    "primary_pattern",
+    "secondary_pattern",
+    "tertiary_pattern")
 
 lista_columnas_numericas_discretas <- 
   c("tumor_event_after_treatment_no",
     "tumor_event_after_treatment_yes",
     "additional_pharmaceutical_therapy_yes",
-    "additional_radiation_therapy_yes")
+    "additional_radiation_therapy_yes",
+    "day_of_form_completion",
+    "month_of_form_completion",
+    "year_of_form_completion")
 
 
 lista_columnas_categoricas_o_discretas <- c(lista_columnas_categoricas_nominales,
@@ -33,6 +76,7 @@ preprocesado_clinico <- function(df){
   
   rownames_orig <- rownames(df)
   
+  # Renombramos nombres de variables que sabemos que van a aparecer:
   names(df)[names(df) == "age_at_initial_pathologic_diagnosis"] <- "age"
   names(df)[names(df) == "new_tumor_event_after_initial_treatment_no"] <- "tumor_event_after_treatment_no"
   names(df)[names(df) == "new_tumor_event_after_initial_treatment_yes"] <- "tumor_event_after_treatment_yes"
@@ -66,7 +110,7 @@ preprocesado_clinico <- function(df){
   df[df == "NA"] <- NA
   
   # 2.
-  porcentaje_nulos <- 60
+  porcentaje_nulos <- 80
   umbral_valores_nulos <- trunc(nrow(df) * (porcentaje_nulos / 100))
   datos_nulos <- colSums(is.na(df))
   for (i in 1:length(datos_nulos)){

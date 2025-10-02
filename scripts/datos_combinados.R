@@ -52,7 +52,7 @@ transformacion_variables <- function(df, clinical_df){
     columna_iesima <- colnames(df)[i]
     if (columna_iesima %in% lista_columnas_numericas){
       df[,i] <- as.numeric(df[,i])
-    }else if(columna_iesima %in% lista_columnas_categoricas){
+    }else if(columna_iesima %in% lista_columnas_categoricas_o_discretas){
       df[,i] <- as.factor(df[,i])
     }
   }

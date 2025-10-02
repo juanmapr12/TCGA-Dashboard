@@ -27,18 +27,7 @@ ui <- dashboardPage(
   ),
   
   dashboardSidebar(
-    sidebarMenu(
-      menuItem("Introducción", tabName = "intro", icon = icon("book-open")),
-      menuItem("Preprocesado",
-               menuSubItem("microARN", tabName = "pre_mirna", icon = icon("dna")),
-               menuSubItem("Clínico", tabName = "pre_clinico", icon = icon("stethoscope"))
-      ),
-      menuItem("Expresión diferencial", tabName = "expr_dif", icon = icon("volcano")),
-      menuItem("Análisis supervivencia", tabName = "surv", icon = icon("line-chart")),
-      menuItem("Enriquecimiento", tabName = "enrich", icon = icon("chart-bar")),
-      menuItem("Clustering", tabName = "cluster", icon = icon("circle-nodes")),
-      menuItem("Clasificación ML", tabName = "clasif_ml", icon = icon("robot"))
-    )
+    sidebarMenuOutput("sidebar")
   ),
   
   dashboardBody(
@@ -340,7 +329,7 @@ ui <- dashboardPage(
       tabItem(tabName = "enrich",
               fluidRow(
                 tabBox(
-                  width = 5, side = "left",
+                  width = 4, side = "left",
                   tabPanel(
                     width = 12,
                     title = "Genes diana",
@@ -409,7 +398,7 @@ ui <- dashboardPage(
                   )
                 ),
                 box(
-                  width = 7, title = "Resultados",
+                  width = 8, title = "Resultados",
                   status = "success", solidHeader = TRUE,
                   plotOutput("enrich_barras",
                              height = "600px",
@@ -442,7 +431,7 @@ ui <- dashboardPage(
                              div(class = "center-col",
                                  numericInput(
                                    inputId = "num_mirnas",
-                                   label = "En el segundo caso, seleccione los N primeros microARN que le gustaría visualizar",
+                                   label = "En el caso de escoger la cuarta opción, seleccione los N primeros microARN que le gustaría visualizar",
                                    value = 50, min = 1, max = 100, step = 1
                                  )
                              )
@@ -552,7 +541,7 @@ ui <- dashboardPage(
                   ),
                   tags$div(style = "text-align: center;",
                            actionButton(
-                             inputId = "ejecucion_tidyverse",
+                             inputId = "ejecucion_tidymodels",
                              label = "Ejecutar con estos valores",
                              style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
                            )
@@ -587,6 +576,88 @@ ui <- dashboardPage(
 
 
 server <- function(input, output, session) {
+  
+  # Estados reactivos:
+  descargado_introduccion <- reactiveVal(FALSE)
+  
+  observeEvent(input$download, {
+    descargado_introduccion(TRUE)
+  })
+  
+  descargado_clinico <- reactiveVal(FALSE)
+  
+  observeEvent(input$preprocesado_clinico, {
+    descargado_clinico(TRUE)
+  })
+  
+  descargado_mirnas <- reactiveVal(FALSE)
+  
+  observeEvent(input$preprocesado_mirnas, {
+    descargado_mirnas(TRUE)
+  })
+  
+  ejecutado_expr_dif <- reactiveVal(FALSE)
+  
+  observeEvent(input$analisis_dea, {
+    ejecutado_expr_dif(TRUE)
+  })
+  
+  ejecutado_supervivencia <- reactiveVal(FALSE)
+  
+  observeEvent(input$analisis_cox, {
+    ejecutado_supervivencia(TRUE)
+  })
+  
+  ejecutado_enriquecimiento <- reactiveVal(FALSE)
+  
+  observeEvent(input$enrich_analysis, {
+    ejecutado_enriquecimiento(TRUE)
+  })
+  
+  ejecutado_clustering <- reactiveVal(FALSE)
+  
+  observeEvent(input$heatmap, {
+    ejecutado_clustering(TRUE)
+  })
+  
+  ejecutado_ml <- reactiveVal(FALSE)
+  
+  observeEvent(input$ejecucion_tidymodels, {
+    ejecutado_ml(TRUE)
+  })
+  
+  
+  # Renderizamos el sidebar en función del paso que se realize:
+  output$sidebar <- renderMenu({
+    sidebarMenu(
+      menuItem(
+        if (descargado_introduccion()) "Introducción✔️" else "Introducción",
+        tabName = "intro",
+        icon = icon("book-open")
+      ),
+      menuItem(
+         if (descargado_mirnas()) "Preprocesado miRNAs✔️" else "Preprocesado miRNAs",
+         tabName = "pre_mirna", icon = icon("dna")),
+      menuItem(
+         if (descargado_clinico()) "Preprocesado clínico✔️" else "Preprocesado clínico",
+         tabName = "pre_clinico", icon = icon("stethoscope")),
+      menuItem(if (ejecutado_expr_dif()) "Expresión diferencial✔️" else "Expresión diferencial", 
+               tabName = "expr_dif", icon = icon("volcano")),
+      
+      menuItem(if (ejecutado_supervivencia()) "Supervivencia✔️" else "Supervivencia",  
+               tabName = "surv", icon = icon("line-chart")),
+      
+      menuItem(if (ejecutado_enriquecimiento()) "Enriquecimiento✔️" else "Enriquecimiento", 
+               tabName = "enrich", icon = icon("chart-bar")),
+      
+      menuItem(if (ejecutado_clustering()) "Clustering✔️" else "Clustering", 
+               tabName = "cluster", icon = icon("circle-nodes")),
+      
+      menuItem(if (ejecutado_ml()) "Clasificación ML✔️" else "Clasificación ML", 
+               tabName = "clasif_ml", icon = icon("robot"))
+    )
+  })
+  
   
   #### Introducción: Preparación del entorno (server) ####
   
@@ -753,8 +824,8 @@ server <- function(input, output, session) {
   })
   
   output$pre_clinico_seleccion <- renderUI({
-    texto_principal <- "Se ha optado por una selección de características manual. En ella se consideran los siguientes aspectos:"
-    elementos <-  c("De todas las columnas clínicas se eliminan las que tengan un porcentaje elevado de valores faltantes. Se ha escogido el 60% como umbral inferior.",
+    texto_principal <- "Se ha optado por una selección de características manual, con criterios decididos por el autor. Concretamente:"
+    elementos <-  c("De todas las columnas clínicas se eliminan las que tengan un porcentaje elevado de valores faltantes. Se ha escogido el 80% como umbral inferior.",
                     "Después se filtran aquellas que tengan relación con la que se considera la variable objetivo, el estado vital del paciente. La relación se comprueba a partir de test paramétricos, no paramétricos o de independencia. Si ésta es estadísticamente significativa (p-valor menor que 0.05) se selecciona la columna.")
       
     HTML(paste0(
@@ -1315,11 +1386,11 @@ server <- function(input, output, session) {
   #### Clasificación ML (server) ####
   
   
-  modelo_a_usar <- eventReactive(input$ejecucion_tidyverse, {
+  modelo_a_usar <- eventReactive(input$ejecucion_tidymodels, {
     input$modelo_a_usar
   })
   
-  df_a_usar <- eventReactive(input$ejecucion_tidyverse, {
+  df_a_usar <- eventReactive(input$ejecucion_tidymodels, {
     df_escogido(
       datos_a_usar = input$conjunto_datos_a_usar,
       df_clinico = df_resultado_pre_clinico(),
@@ -1344,7 +1415,7 @@ server <- function(input, output, session) {
     )
   })
   
-  resultado_final <- eventReactive(input$ejecucion_tidyverse, {
+  resultado_final <- eventReactive(input$ejecucion_tidymodels, {
     validate(
       need(input$analisis_dea, "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
     )
@@ -1358,7 +1429,7 @@ server <- function(input, output, session) {
     )
   })
   
-  observeEvent(input$ejecucion_tidyverse, {
+  observeEvent(input$ejecucion_tidymodels, {
     validate(
       need(input$analisis_dea, "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
     )
