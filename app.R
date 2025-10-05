@@ -1,12 +1,5 @@
-options(warn=-1)
 
-library(shiny)
-library(shinydashboard)
-library(DT)
-library(shinyWidgets)
-library(shinyalert)
-
-# Cargamos scripts necesarios
+source("dependencias.R")
 source("scripts/preparacion_entorno.R")
 source("scripts/preprocesado_clinico.R")
 source("scripts/preprocesado_mirnas.R")
@@ -152,7 +145,7 @@ ui <- dashboardPage(
                     helpText("Es decir, si se escoge el 10% (valor establecido por defecto) quiere decir que se rechazarán los microARN cuyas expresiones o conteos en la totalidad de pacientes superan el 10% de valores nulos. Se recomienda no superar el 20% para evitar introducir sesgos en la posterior imputación de estos valores."),
                     numericInput(
                       inputId = "valor_varianza",
-                      label = "Establezca un valor mínimo de la varianza a superar por cada microARN",
+                      label = "Establezca un umbral de la varianza a superar por cada microARN",
                       value = 0.5, min = 0, max = 500, step = 0.1
                     )
                   ),
@@ -231,8 +224,13 @@ ui <- dashboardPage(
                   ),
                   numericInput(
                     inputId = "logFC",
-                    label = "Establezca el valor mínimo del logaritmo en base 2 del Fold Change, expresado en valor absoluto",
-                    value = 1.5, min = 0, max = 5, step = 0.1
+                    label = "Establezca el umbral del log Fold Change para los miRNAs del eje OX+",
+                    value = 1.5, min = 0, max = 10, step = 0.1
+                  ),
+                  numericInput(
+                    inputId = "logFC_negativo",
+                    label = "Establezca el umbral del log Fold Change para los miRNAs del eje OX-",
+                    value = -1.5, min = -10, max = 0, step = 0.1
                   ),
                   numericInput(
                     inputId = "p_valor_adj",
@@ -253,7 +251,7 @@ ui <- dashboardPage(
                   width = 8, side = "left",
                   tabPanel("Resultados Volcano Plot", 
                            plotOutput("volcano_plot",
-                                      height = "500px",
+                                      height = "650px",
                                       width = "100%")
                   ),
                   tabPanel("Tabla de microARN diferencialmente expresados (los de color rojo)",
@@ -418,29 +416,20 @@ ui <- dashboardPage(
                   tabPanel(
                     title = "Parámetros dendrograma",
                     fluidRow(
-                      column(4, 
+                      column(6, 
                              div(class = "center-col",
                                  selectInput(
                                    inputId = "mirnas_escogidos",
-                                   label = "Seleccione el conjunto de microARN a usar ",
-                                   choices = list("microARN tras Expresión Diferencial", "microARN tras Supervivencia", "microARN tras Expresión Diferencial y Supervivencia", "microARN con más variabilidad (ordenados de mayor a menor según coeficiente de variación)")
+                                   label = "Seleccione el conjunto de miRNAs a usar para representar sus distancias en el dendrograma",
+                                   choices = list("microARN tras Expresión Diferencial", "microARN tras Supervivencia", "microARN tras Expresión Diferencial y Supervivencia")
                                  )
                              )
                       ),
-                      column(4, 
-                             div(class = "center-col",
-                                 numericInput(
-                                   inputId = "num_mirnas",
-                                   label = "En el caso de escoger la cuarta opción, seleccione los N primeros microARN que le gustaría visualizar",
-                                   value = 50, min = 1, max = 100, step = 1
-                                 )
-                             )
-                      ),
-                      column(4, 
+                      column(6, 
                              div(class = "center-col",
                                  selectInput(
                                    inputId = "jerarquia",
-                                   label = "Seleccione el método de enlace que permitirá medir las distancias entre los microARN",
+                                   label = "Seleccione el método de enlace que permitirá medir las distancias entre los miRNAs",
                                    choices = list("ward.D2", "complete", "average")
                                  )
                              )
@@ -935,7 +924,8 @@ server <- function(input, output, session) {
   grafica_dea <- eventReactive(input$analisis_dea, {
     volcano(
       tabla_resultados = resultados_dea(),
-      umbral_logFC = input$logFC, 
+      umbral_logFC = input$logFC,
+      umbral_logFC_negativo = input$logFC_negativo,
       umbral_pvalor_ajustado = input$p_valor_adj
     )
   })
@@ -955,6 +945,7 @@ server <- function(input, output, session) {
     mirnas_que_cumplen_ambos_filtros(
       resultado = resultados_dea(),
       umbral_logFC = input$logFC, 
+      umbral_logFC_negativo = input$logFC_negativo,
       umbral_pvalor_ajustado = input$p_valor_adj
     )
   })
@@ -1132,6 +1123,10 @@ server <- function(input, output, session) {
     validate(
       need(input$analisis_cox, "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
     )
+    validate(
+      need(is.data.frame(genes_diana()) && nrow(genes_diana()) > 0 && ncol(genes_diana()) > 0, 
+           "⚠️ Con la configuración de parámetros escogida no se ha podido obtener ningún gen diana. Por favor, escoja otros parámetros o suavize las condiciones sobre el análisis escogido.")
+    )
     analisis_enriquecimiento(
       genes_diana = genes_diana(),
       tipo_analisis = input$tipo_enrich,
@@ -1215,7 +1210,6 @@ server <- function(input, output, session) {
       dea = rownames(resultados_dea_tras_filtro()),
       cox = resultados_cox(),
       dea_y_cox = union_mirnas(),
-      N = input$num_mirnas,
       metodo_jerarquico = input$jerarquia
     )
   })
@@ -1247,7 +1241,7 @@ server <- function(input, output, session) {
   
   output$parametro_clinicos_cluster <- renderUI({
     fluidRow(
-      column(4, 
+      column(6, 
              div(class = "center-col",
                  selectInput(
                    inputId = "num_cluster_selecc",
@@ -1257,20 +1251,11 @@ server <- function(input, output, session) {
                  )
              )
       ),
-      column(4,
-             div(class = "center-col",
-                 radioButtons(
-                   inputId = "tipo_regulated",
-                   label = "Indique con qué tipo de microARNs del clúster escogido le gustaría quedarse",
-                   choices = list("up-regulated (color rojo)", "down-regulated (color azul)")
-                 )
-             )
-      ),
-      column(4,
+      column(6,
              div(class = "center-col",
                  numericInput(
                    inputId = "limite_selecc",
-                   label = "Establezca el número de muestras con el que desea realizar el análisis univariado",
+                   label = "Establezca el número de muestras con el que desea realizar el análisis",
                    value = 5, min = 1, max = 50, step = 1
                  )
              )
@@ -1317,7 +1302,6 @@ server <- function(input, output, session) {
       df_mirnas = df_resultado_pre_mirnas_filtrado(),
       agrupamiento_mirnas = resultado_heatmap(),
       cluster = input$num_cluster_selecc,
-      tipo = input$tipo_regulated,
       limite = input$limite_selecc,
       clinical_df = df_resultado_pre_clinico(),
       df_completo = df_conjunto()
@@ -1330,7 +1314,6 @@ server <- function(input, output, session) {
       agrupamiento_mirnas = resultado_heatmap(),
       cluster = input$num_cluster_selecc,
       limite = input$limite_selecc,
-      tipo = input$tipo_regulated,
       clinical_df = df_resultado_pre_clinico(),
       df_completo = df_conjunto()
     )[[2]]
@@ -1342,7 +1325,6 @@ server <- function(input, output, session) {
       agrupamiento_mirnas = resultado_heatmap(),
       cluster = input$num_cluster_selecc,
       limite = input$limite_selecc,
-      tipo = input$tipo_regulated,
       clinical_df = df_resultado_pre_clinico(),
       df_completo = df_conjunto()
     )[[3]]

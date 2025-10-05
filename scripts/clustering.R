@@ -1,5 +1,5 @@
 
-clustering_dendrograma <- function(df_mirnas, df_completo, tipo, dea, cox, dea_y_cox, N, metodo_jerarquico){
+clustering_dendrograma <- function(df_mirnas, df_completo, tipo, dea, cox, dea_y_cox, metodo_jerarquico){
   
   if(tipo == "microARN tras Expresión Diferencial"){
     mirnas_seleccionados <- t(df_completo[,dea])
@@ -7,14 +7,6 @@ clustering_dendrograma <- function(df_mirnas, df_completo, tipo, dea, cox, dea_y
     mirnas_seleccionados <- t(df_completo[,cox])
   }else if(tipo == "microARN tras Expresión Diferencial y Supervivencia"){
     mirnas_seleccionados <- t(df_completo[,dea_y_cox])
-  }else{
-    media_mirnas <- apply(df_mirnas, 1, mean)
-    sd_mirnas <- apply(df_mirnas, 1, sd)
-    
-    # Coeficiente de variación = sd / media
-    cv_mirna <- sd_mirnas / media_mirnas
-    topN_cv <- sort(cv_mirna, decreasing = TRUE)[1:N]
-    mirnas_seleccionados <- t(df_completo[,names(topN_cv)])
   }
   
   mirnas_escalados <- t(scale(t(mirnas_seleccionados)))
@@ -46,7 +38,7 @@ clustering_heatmap <- function(mirnas_escalados, conglomerado, k, umbral){
 
 
 tabla_de_datos_por_cada_cluster <- function(df_mirnas, agrupamiento_mirnas, cluster, 
-                                            tipo, limite, clinical_df, df_completo){
+                                            limite, clinical_df, df_completo){
   
   mirnas_del_cluster <- names(agrupamiento_mirnas[agrupamiento_mirnas == cluster])
   
@@ -57,11 +49,8 @@ tabla_de_datos_por_cada_cluster <- function(df_mirnas, agrupamiento_mirnas, clus
   
   # Promedio de expresión por muestra (columna)
   expr_media_por_muestra <- sort(abs(colMeans(submatriz_mirnas_cluster)), decreasing=TRUE)
-  if(tipo == "up-regulated (color rojo)"){
-    expresiones_mirna_ordenadas <- sort(expr_media_por_muestra, decreasing = TRUE)
-  }else if(tipo == "down-regulated (color azul)"){
-    expresiones_mirna_ordenadas <- sort(expr_media_por_muestra, decreasing = FALSE)
-  }
+  expresiones_mirna_ordenadas <- sort(expr_media_por_muestra, decreasing = TRUE)
+  
   muestras_top_expresion <- names(expresiones_mirna_ordenadas)[1:limite]
   
   resultado_mirnas <- t(df_completo[muestras_top_expresion, mirnas_del_cluster])

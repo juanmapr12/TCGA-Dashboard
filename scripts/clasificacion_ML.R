@@ -99,11 +99,6 @@ pipeline_tidyverse_1 <- function(df, p, folds, modelo_a_ejecutar){
 pipeline_tidyverse_2 <- function(model_results_after_tuning, model_tune_wf, data_split){
   
   set.seed(123)
-  # Especificación de la mejor métrica a seguir:
-  # metrica_escogida <- switch(metrica_a_seguir, 
-  #                            "Accuracy" = "accuracy",
-  #                            "Área bajo la curva ROC" = "roc_auc",
-  #                            "Puntuación Brier" = "brier_class")
   
   # Seleccionamos la mejor según la métrica
   data_best <-

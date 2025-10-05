@@ -1,16 +1,11 @@
-# Descomentar estas líneas si no se tiene instalado el paquete 'BiocManager'
-# ni la herramienta 'GDCRNATools:
-if (!require("BiocManager", quietly = TRUE)){
-  install.packages("BiocManager")
-  BiocManager::install('GDCRNATools')
-  BiocManager::install('impute')
-  BiocManager::install('EnhancedVolcano')
-  BiocManager::install('Limma')
-  BiocManager::install("multiMiR")
-  BiocManager::install("clusterProfiler")
-  BiocManager::install("org.Hs.eg.db")
-  BiocManager::install("enrichplot")
-}
+options(warn=-1)
+
+library(shiny)
+library(shinydashboard)
+library(DT)
+library(shinyWidgets)
+library(shinyalert)
+
 library(GDCRNATools)
 library(impute)
 library(EnhancedVolcano)
@@ -28,7 +23,7 @@ library(org.Hs.eg.db)
 library(enrichplot)
 
 library(pheatmap)
-library(tidymodels)  # Incluye parsnip, recipes, workflows...
+library(tidymodels)
 
 
 

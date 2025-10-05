@@ -64,7 +64,7 @@ analisis_expr_dif <- function(muestras_escogidas, df_expresiones_mirnas, df_comp
 }
 
 
-volcano <- function(tabla_resultados, umbral_logFC, umbral_pvalor_ajustado){
+volcano <- function(tabla_resultados, umbral_logFC, umbral_logFC_negativo, umbral_pvalor_ajustado){
   
   print(EnhancedVolcano(tabla_resultados,
                         title = "Volcano Plot para los parámetros seleccionados",
@@ -76,10 +76,15 @@ volcano <- function(tabla_resultados, umbral_logFC, umbral_pvalor_ajustado){
 }
 
 
-mirnas_que_cumplen_ambos_filtros <- function(resultado_analisis, umbral_logFC, umbral_pvalor_ajustado){
+mirnas_que_cumplen_ambos_filtros <- function(resultado_analisis, 
+                                             umbral_logFC, 
+                                             umbral_logFC_negativo, 
+                                             umbral_pvalor_ajustado){
   tt_filtrado <- subset(
     resultado_analisis,
-    adj.P.Val < umbral_pvalor_ajustado & abs(logFC) > umbral_logFC
+    adj.P.Val < umbral_pvalor_ajustado & 
+      (logFC > umbral_logFC |
+      logFC < umbral_logFC_negativo)
   )
   return(tt_filtrado[,c("logFC", "adj.P.Val")])
 }

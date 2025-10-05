@@ -14,12 +14,11 @@ resultados_genes_diana <- function(mirnas_seleccionados, tipo_datos){
                                    table   = valor,
                                    summary = TRUE)
   
-  resultados <- multimir_results@data
-  if (is.null(resultados) || nrow(resultados) == 0) {
-    return("⚠️ No se ha podido obtener ningún gen diana con esa configuración de parámetros.")
+  if (is.null(multimir_results)) {
+    return("No se ha podido obtener ningún gen diana")
   }
   
-  return(resultados)
+  return(multimir_results@data)
 }
 
 
