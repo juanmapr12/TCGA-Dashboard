@@ -4,13 +4,13 @@ df_escogido <- function(datos_a_usar, df_clinico, df_completo, mirnas_dea, mirna
   if(datos_a_usar == "Variables clínicas"){
     return(df_clinico)
     
-  }else if(datos_a_usar == "Variables clínicas + microARN tras Expresión Diferencial"){
+  }else if(datos_a_usar == "Variables clínicas + miRNAs tras Expresión Diferencial"){
     return(df_completo[,union(colnames(df_clinico), mirnas_dea)])
     
-  }else if(datos_a_usar == "Variables clínicas + microARN tras Supervivencia"){
+  }else if(datos_a_usar == "Variables clínicas + miRNAs tras Supervivencia"){
     return(df_completo[,union(colnames(df_clinico), mirnas_cox)])
     
-  }else if(datos_a_usar == "Variables clínicas + microARN tras Expresión Diferencial y Supervivencia"){
+  }else if(datos_a_usar == "Variables clínicas + miRNAs tras Expresión Diferencial y Supervivencia"){
     return(df_completo[,union(colnames(df_clinico), union(mirnas_dea, mirnas_cox))])
     
   }

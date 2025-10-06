@@ -1,3 +1,4 @@
+options(warn = -1)
 
 source("dependencias.R")
 source("scripts/preparacion_entorno.R")
@@ -86,10 +87,9 @@ ui <- dashboardPage(
                               ), select = "TCGA-HNSC", selectize = TRUE
                   ),
                   tags$div(style = "text-align: center;",
-                    helpText("Recuerde que puede buscar el proyecto que desee borrando y escribiendo su nombre dentro de la propia barra de búsqueda.")
+                    helpText("Recuerde que puede buscar el proyecto que desee borrando y escribiendo su nombre dentro de la propia barra de búsqueda. Se descargarán tanto datos clínicos como de expresión de miRNAs.")
                   ),
-                  selectInput("data_type", "Seleccione un tipo de datos:",
-                              choices = c("miRNAs", "Clinical")),
+                  useSweetAlert(),
                   tags$div(style = "text-align: center;",
                            actionButton("download", 
                                         "Descargar/Obtener datos", 
@@ -101,7 +101,7 @@ ui <- dashboardPage(
                   title = "Aviso",
                   status = "warning",
                   solidHeader = TRUE,
-                  helpText(tags$strong("Los archivos del proyecto se almacenan en local (carpeta metadatos). Por tanto, mientras más archivos contenga el proyecto más grande será la espera, por lo que le pedimos paciencia si la barra de progreso queda estancada. Si éste ya viene descargado (como el del caso de prueba que se da, el TCGA-HNSC) no será necesario descargar nada adicional."))
+                  helpText(tags$strong("Los archivos del proyecto se almacenan en local (carpeta metadatos). Mientras más archivos contenga el proyecto más grande será la espera, por lo que le pedimos paciencia si la barra de progreso queda estancada. Si éste ya viene descargado (como el del caso de prueba que se da, el TCGA-HNSC) no será necesario descargar nada adicional."))
                 ),
                 
                 box(
@@ -110,14 +110,6 @@ ui <- dashboardPage(
                   status = "info",
                   solidHeader = TRUE,
                   textOutput("status")
-                ), 
-                
-                box(
-                  width = 12,
-                  title = "Proyecto que se va a usar",
-                  status = "success",
-                  solidHeader = TRUE,
-                  uiOutput("proyecto_a_usar")
                 )
               )
               
@@ -130,22 +122,22 @@ ui <- dashboardPage(
                 box(
                   width = 12, title = "Parámetros a modificar en el preprocesado", status = "primary", solidHeader = TRUE,
                   tags$div(class = "inputs-espaciados",
-                    helpText("Una vez normalizados los microARN a lecturas mapeadas por millón (lo que quiere decir que los conteos de expresiones de todos los microARN para una sola muestra no suman uno, sino un millón), se le pide al usuario que:"),
+                    helpText("Una vez normalizados los miRNAs a lecturas mapeadas por millón (lo que quiere decir que los conteos de expresión de todos los microARNs para una sola muestra no suman uno, sino un millón), se le pide al usuario que:"),
                     numericInput(
                       inputId = "porcentaje_max_nulos",
-                      label = "Establezca un porcentaje máximo de pacientes permitidos para las que las distintas expresiones del microARN superen el valor 1 (un valor cercano al 0)",
+                      label = "Establezca un porcentaje máximo de pacientes permitidos en los que la expresión de los miRNAs filtrados superen el valor 1 (un valor cercano al 0)",
                       value = 50, min = 0, max = 100, step = 1
                     ),
-                    helpText("Es decir, si se escoge el 50% (valor establecido por defecto) quiere decir que se rechazarán los microARN cuya expresión en pacientes es inferior a 1 en, al menos, el 50% del total."),
+                    helpText("Es decir, si se escoge el 50% (valor establecido por defecto) quiere decir que se rechazarán los miRNAs cuya expresión en pacientes es inferior a 1 en, al menos, el 50% del total."),
                     numericInput(
                       inputId = "porcentaje_max_na",
-                      label = "Establezca un porcentaje máximo de pacientes a los que se les permite que las expresiones del microARN sean un valor nulo",
+                      label = "Establezca un porcentaje máximo de pacientes a los que se les permite que la expresión de los miRNAs filtrados sean un valor nulo",
                       value = 10, min = 0, max = 20, step = 1
                     ),
-                    helpText("Es decir, si se escoge el 10% (valor establecido por defecto) quiere decir que se rechazarán los microARN cuyas expresiones o conteos en la totalidad de pacientes superan el 10% de valores nulos. Se recomienda no superar el 20% para evitar introducir sesgos en la posterior imputación de estos valores."),
+                    helpText("Es decir, si se escoge el 10% (valor establecido por defecto) quiere decir que se rechazarán los miRNAs cuya expresión o conteo en la totalidad de pacientes superan el 10% de valores nulos. Se recomienda no superar el 20% para evitar introducir sesgos en la posterior imputación de estos valores."),
                     numericInput(
                       inputId = "valor_varianza",
-                      label = "Establezca un umbral de la varianza a superar por cada microARN",
+                      label = "Establezca un umbral de la varianza a superar por cada miRNA",
                       value = 0.5, min = 0, max = 500, step = 0.1
                     )
                   ),
@@ -234,10 +226,10 @@ ui <- dashboardPage(
                   ),
                   numericInput(
                     inputId = "p_valor_adj",
-                    label = "Establezca el p-valor ajustado, que se calcula aplicando el menos logaritmo en base 10 al p-valor",
+                    label = "Establezca el valor de corte del eje OY, que se calcula aplicando el menos logaritmo en base 10 al p-valor ajustado",
                     value = 9, min = 0, max = 1000, step = 1
                   ),
-                  helpText("Para ayudarle en los cálculos, el p-valor ajustado x correspondería con un p-valor de 1e-x"),
+                  helpText("Para ayudarle en los cálculos, el valor de corte x correspondería con un p-valor ajustado de 1e-x"),
                   tags$div(style = "text-align: center;",
                            actionButton(
                              inputId = "analisis_dea",
@@ -254,8 +246,8 @@ ui <- dashboardPage(
                                       height = "650px",
                                       width = "100%")
                   ),
-                  tabPanel("Tabla de microARN diferencialmente expresados (los de color rojo)",
-                          helpText(tags$strong("Recuerde que estos microARN son los que se utilizarán para análisis y modelos posteriores.")),
+                  tabPanel("Tabla de miRNAs diferencialmente expresados (los de color rojo)",
+                          helpText(tags$strong("Recuerde que estos miRNAs son los que se utilizarán para análisis y modelos posteriores.")),
                           DT::dataTableOutput("mirnas_filtrados")
                   )
                 )
@@ -288,7 +280,7 @@ ui <- dashboardPage(
                   ),
                   tags$div(
                     style = "text-align: center;",
-                    helpText("Se escogerán los microARN cuyo HR (Hazard Ratio) quede dentro de los intervalos azules")
+                    helpText("Se escogerán los miRNAs cuyo HR (Hazard Ratio) quede dentro de los intervalos azules")
                   ),
                   tags$div(style = "text-align: center;",
                            actionButton(
@@ -313,8 +305,8 @@ ui <- dashboardPage(
                                     )
                            )
                   ),
-                  tabPanel("Tabla de microARN escogidos tras el análisis",
-                           helpText(tags$strong("Recuerde que estos microARN son los que se utilizarán para análisis y modelos posteriores.")),
+                  tabPanel("Tabla de miRNAs escogidos tras el análisis",
+                           helpText(tags$strong("Recuerde que estos miRNAs son los que se utilizarán para análisis y modelos posteriores.")),
                            DT::dataTableOutput("tabla_mirnas_supervivencia")
                   )
                 )
@@ -336,7 +328,7 @@ ui <- dashboardPage(
                            div(class="center-col",
                                radioButtons(
                                  inputId = "mirna_genes",
-                                 label = "Seleccione los microARN de los que desea obtener sus genes diana:",
+                                 label = "Seleccione los miRNAs de los que desea obtener sus genes diana:",
                                  choices = list("Los resultantes tras Expresión Diferencial", "Los resultantes tras Análisis de Supervivencia", "La unión de ambos"),
                                  selected = "La unión de ambos"
                                ),
@@ -421,7 +413,7 @@ ui <- dashboardPage(
                                  selectInput(
                                    inputId = "mirnas_escogidos",
                                    label = "Seleccione el conjunto de miRNAs a usar para representar sus distancias en el dendrograma",
-                                   choices = list("microARN tras Expresión Diferencial", "microARN tras Supervivencia", "microARN tras Expresión Diferencial y Supervivencia")
+                                   choices = list("miRNAs tras Expresión Diferencial", "miRNAs tras Supervivencia", "miRNAs tras Expresión Diferencial y Supervivencia")
                                  )
                              )
                       ),
@@ -510,8 +502,8 @@ ui <- dashboardPage(
                   width = 4, title = "Opciones para el modelado", status = "primary", solidHeader = TRUE,
                   numericInput(
                     inputId = "proporcion",
-                    label = "Seleccione el porcentaje (entre 0 y 1) en el que le gustaría dividir los conjuntos de entrenamiento y test",
-                    value = 0.6, min = 0, max = 1, step = 0.01
+                    label = "Seleccione el porcentaje (entre 0 y 1) del tamaño del conjunto de entrenamiento del total de datos. El otro porcentaje restante irá para el conjunto de test",
+                    value = 60, min = 0, max = 100, step = 0.01
                   ),
                   numericInput(
                     inputId = "particiones",
@@ -521,7 +513,7 @@ ui <- dashboardPage(
                   selectInput(
                     inputId = "conjunto_datos_a_usar",
                     label = "Seleccione el conjunto de datos",
-                    choices = list("Variables clínicas", "Variables clínicas + microARN tras Expresión Diferencial", "Variables clínicas + microARN tras Supervivencia", "Variables clínicas + microARN tras Expresión Diferencial y Supervivencia")
+                    choices = list("Variables clínicas", "Variables clínicas + miRNAs tras Expresión Diferencial", "Variables clínicas + miRNAs tras Supervivencia", "Variables clínicas + miRNAs tras Expresión Diferencial y Supervivencia")
                   ),
                   radioButtons(
                     inputId = "modelo_a_usar",
@@ -654,10 +646,6 @@ server <- function(input, output, session) {
     input$project
   })
   
-  tipo_datos <- eventReactive(input$download, {
-    input$data_type
-  })
-  
   output$proyecto_utilizado <- renderText(
     paste0("→ El tipo de cáncer a analizar es el ", proyecto(), ". Si selecciona otro distinto, es necesario ejecutar todos los análisis que se deseen desde cero.")
   )
@@ -666,76 +654,56 @@ server <- function(input, output, session) {
   observeEvent(input$download, {
     
     # Ruta donde se guardaría el archivo simulado
-    file_name <- paste0("metadatos/", proyecto(), "/", tipo_datos())
+    file_name <- paste0("metadatos/", proyecto())
     
     if (file.exists(file_name)) {
       # Caso: ya descargado
       output$status <- renderText(
-          paste("Los datos de tipo", tipo_datos() ,"del proyecto", proyecto(), "ya están listos. No hace falta descargar nada.")
+          paste("Los datos del proyecto", proyecto(), "ya están listos. No hace falta descargar nada.")
       )
+      descargado_clinico(FALSE)
+      descargado_mirnas(FALSE)
+      ejecutado_expr_dif(FALSE)
+      ejecutado_supervivencia(FALSE)
+      ejecutado_enriquecimiento(FALSE)
+      ejecutado_clustering(FALSE)
+      ejecutado_ml(FALSE)
+      
     } else {
-      # Caso: no descargado → lanzamos descarga de lo que se nos pida
-      progressSweetAlert(
+      # Caso: no descargado → lanzamos descarga de todo
+      
+      sendSweetAlert(
         session = session,
-        id = "myprogress",
-        title = "Descargando datos del GDC...",
-        display_pct = TRUE, value = 0
+        title = "Espere un poco...",
+        text = "Se están descargando los datos solicitados. Por favor, espere.",
+        type = "info"
       )
       
-      for (i in 1:4) {
-        updateProgressBar(
-          session = session,
-          id = "myprogress",
-          value = i * 25
-        )
-        if(input$data_type == "miRNAs") {
-          descarga_mirnas(input$project)
-        }else if(input$data_type == "Clinical"){
-          descarga_clinicos(input$project)
-        }
-      }
+      descarga_mirnas(input$project)
+      descarga_clinicos(input$project)
       
-      closeSweetAlert(session = session)
+      closeSweetAlert(session)
+      
+      sendSweetAlert(
+        session = session,
+        title ="¡Descarga completada!",
+        type = "success"
+      )
       
       elimina_carpetas_GDC()
       
       output$status <- renderText(
         paste("Datos del proyecto", proyecto(), "descargados correctamente.")
       )
+      
+      descargado_clinico(FALSE)
+      descargado_mirnas(FALSE)
+      ejecutado_expr_dif(FALSE)
+      ejecutado_supervivencia(FALSE)
+      ejecutado_enriquecimiento(FALSE)
+      ejecutado_clustering(FALSE)
+      ejecutado_ml(FALSE)
     } 
-  })
-  
-  
-  output$proyecto_a_usar <- renderUI({
-    titulo <- "Se usará el último proyecto que se haya descargado u obtenido y que contenga ambos tipos de datos. En nuestro caso:"
-    file_name_cli <- paste0("metadatos/", proyecto(), "/Clinical")
-    file_name_mir <- paste0("metadatos/", proyecto(), "/miRNAs")
-    
-    if(file.exists(file_name_cli) & file.exists(file_name_cli)){
-      items <- c(paste("Clínicos: ", proyecto()),
-                 paste("Expresiones de microARN: ", proyecto())
-      )
-    }else if(!file.exists(file_name_cli)){
-      shinyalert(
-        title = "¡Atención!",
-        text = paste("Faltan los datos clínicos del proyecto", proyecto(), ". Si quiere usar todas las funcionalidades de la aplicación, se recomienda que los descargue."),
-        type = "warning"
-      )
-      items <- c("Clínicos: Faltan", paste("Expresiones de microARN: ", proyecto()))
-    }else{
-      shinyalert(
-        title = "¡Atención!",
-        text = paste("Faltan los datos de expresiones de microARN del proyecto", proyecto(), ". Si quiere usar todas las funcionalidades de la aplicación, se recomienda que los descargue."),
-        type = "warning"
-      )
-      items <- c(paste("Clínicos: ", proyecto()), "Expresiones de microARN: Faltan")
-    }
-    HTML(paste0(
-      "<strong>", titulo, "</strong>",  # título en negrita
-      "<ul>",
-      paste("<li>", items, "</li>", collapse = ""),
-      "</ul>"
-    ))
   })
   
   
@@ -779,7 +747,7 @@ server <- function(input, output, session) {
     if(nrow(df_resultado_pre_mirnas()) > 0){
       output$estado_pre_mirnas <- renderUI(
         HTML(paste0("<strong>Datos preprocesados correctamente. Hay ", 
-                    num_mirnas_selecc(), " microARN.</strong>"))
+                    num_mirnas_selecc(), " miRNAs.</strong>"))
       )
       closeSweetAlert(session)
       removeNotification(notif_mirnas)
@@ -909,10 +877,10 @@ server <- function(input, output, session) {
   
   resultados_dea <- eventReactive(input$analisis_dea, {
     validate(
-      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     validate(
-      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     analisis_expr_dif(
       muestras_escogidas = input$muestras,
@@ -937,13 +905,13 @@ server <- function(input, output, session) {
   
   resultados_dea_tras_filtro <- eventReactive(input$analisis_dea, {
     validate(
-      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     validate(
-      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     mirnas_que_cumplen_ambos_filtros(
-      resultado = resultados_dea(),
+      resultado_analisis = resultados_dea(),
       umbral_logFC = input$logFC, 
       umbral_logFC_negativo = input$logFC_negativo,
       umbral_pvalor_ajustado = input$p_valor_adj
@@ -967,10 +935,10 @@ server <- function(input, output, session) {
   
   resultados_cox <- eventReactive(input$analisis_cox, {
     validate(
-      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     validate(
-      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     mirnas_modelo_cox(
       p_value = input$p_valor,
@@ -983,10 +951,10 @@ server <- function(input, output, session) {
   
   pvalor_cox <- eventReactive(input$analisis_cox, {
     validate(
-      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     validate(
-      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     mirnas_modelo_cox(
       p_value = input$p_valor,
@@ -999,10 +967,10 @@ server <- function(input, output, session) {
   
   hr_cox <- eventReactive(input$analisis_cox, {
     validate(
-      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     validate(
-      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     mirnas_modelo_cox(
       p_value = input$p_valor,
@@ -1015,10 +983,10 @@ server <- function(input, output, session) {
   
   num_mirnas_filtrados <- eventReactive(input$analisis_cox, {
     validate(
-      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     validate(
-      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     mirnas_modelo_cox(
       p_value = input$p_valor,
@@ -1032,10 +1000,10 @@ server <- function(input, output, session) {
   observeEvent(input$analisis_cox, {
     
     validate(
-      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     validate(
-      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     
     notif_supervivencia <- showNotification("Espere un poco...", duration = NULL, type = "warning")
@@ -1049,7 +1017,7 @@ server <- function(input, output, session) {
   
   output$mirnas_supervivencia <- renderUI({
     selectInput("columna_mirnas_supervivencia",
-                paste("Seleccione uno de los", num_mirnas_filtrados(), "microARN obtenidos"),
+                paste("Seleccione uno de los", num_mirnas_filtrados(), "miRNAs obtenidos"),
                 choices = resultados_cox()
     )
   })
@@ -1091,10 +1059,10 @@ server <- function(input, output, session) {
   
   mirnas_seleccionados <- reactive({
     validate(
-      need(input$analisis_dea, "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     validate(
-      need(input$analisis_cox, "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     if(input$mirna_genes == "Los resultantes tras Análisis de supervivencia"){
       resultados_cox()
@@ -1118,10 +1086,10 @@ server <- function(input, output, session) {
   
   datos_enriquecimiento <- eventReactive(input$enrich_analysis, {
     validate(
-      need(input$analisis_dea, "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     validate(
-      need(input$analisis_cox, "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     validate(
       need(is.data.frame(genes_diana()) && nrow(genes_diana()) > 0 && ncol(genes_diana()) > 0, 
@@ -1138,10 +1106,10 @@ server <- function(input, output, session) {
   
   observeEvent(input$enrich_analysis, {
     validate(
-      need(input$analisis_dea, "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     validate(
-      need(input$analisis_cox, "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     
     notif_enriquecimiento <- showNotification("Espere un poco...", duration = NULL, type = "warning")
@@ -1188,20 +1156,20 @@ server <- function(input, output, session) {
   
   union_mirnas <- reactive({
     validate(
-      need(input$analisis_dea, "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     validate(
-      need(input$analisis_cox, "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     union(resultados_cox(), rownames(resultados_dea_tras_filtro()))
   })
   
   resultado_dendrograma <- eventReactive(input$dendrograma, {
     validate(
-      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     validate(
-      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     clustering_dendrograma(
       df_mirnas = df_resultado_pre_mirnas_filtrado(),
@@ -1216,10 +1184,10 @@ server <- function(input, output, session) {
     
   resultado_heatmap <- eventReactive(input$heatmap, {
     validate(
-      need(input$preprocesado_mirnas, "⚠️ Debe ejecutar primero el preprocesado de los microARN. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     validate(
-      need(input$preprocesado_clinico, "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     clustering_heatmap(
       mirnas_escalados = resultado_dendrograma()[[1]],
@@ -1260,7 +1228,7 @@ server <- function(input, output, session) {
                  )
              )
       )
-      # donde los microARN del clúster escogido se encuentran diferencialmente expresados según el criterio de la izquierda
+      # donde los miRNAs del clúster escogido se encuentran diferencialmente expresados según el criterio de la izquierda
     )
   })
   
@@ -1269,7 +1237,7 @@ server <- function(input, output, session) {
       tabBox(
         width = 12, side = "left",
         tabPanel(
-          "Tabla de microARN",
+          "Tabla de miRNAs",
           div(style = "margin-top: 30px;",
               DT::dataTableOutput("mirnas_cluster")
           )
@@ -1384,10 +1352,10 @@ server <- function(input, output, session) {
   
   lista_elementos <- reactive({
     validate(
-      need(input$analisis_dea, "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     validate(
-      need(input$analisis_cox, "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     pipeline_tidyverse_1(
       df = df_a_usar(),
@@ -1399,10 +1367,10 @@ server <- function(input, output, session) {
   
   resultado_final <- eventReactive(input$ejecucion_tidymodels, {
     validate(
-      need(input$analisis_dea, "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     validate(
-      need(input$analisis_cox, "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     pipeline_tidyverse_2(
       model_results_after_tuning = lista_elementos()[[1]],
@@ -1413,10 +1381,10 @@ server <- function(input, output, session) {
   
   observeEvent(input$ejecucion_tidymodels, {
     validate(
-      need(input$analisis_dea, "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     validate(
-      need(input$analisis_cox, "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
     )
     
     sendSweetAlert(

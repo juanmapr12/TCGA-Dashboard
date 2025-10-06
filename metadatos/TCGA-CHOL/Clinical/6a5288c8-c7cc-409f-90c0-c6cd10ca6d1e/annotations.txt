@@ -1,0 +1,2 @@
+id	submitter_id	entity_type	entity_id	category	classification	created_datetime	status	notes
+d22e0a72-a9dc-57f2-8e51-b9cbe7e36339	28422	case	57500d4c-4bb3-4f32-ae3a-a0b78f18c526	Item is noncanonical	Notification	2015-06-24T00:00:00	Approved	Extension set. Only DNA from tumor and normal shipped.

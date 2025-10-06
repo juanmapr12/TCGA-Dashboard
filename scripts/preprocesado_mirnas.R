@@ -38,7 +38,6 @@ preprocesado_mirnas <- function(df, project, porcentaje_max_nulos,
   # los metadatos
   df <- gdcFilterSampleType(df)
   
-  
   isoform_miRNAs_dir <- paste('metadatos', project, 'miRNAs', sep='/')
   
   

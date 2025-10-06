@@ -1,11 +1,11 @@
 
 clustering_dendrograma <- function(df_mirnas, df_completo, tipo, dea, cox, dea_y_cox, metodo_jerarquico){
   
-  if(tipo == "microARN tras Expresión Diferencial"){
+  if(tipo == "miRNAs tras Expresión Diferencial"){
     mirnas_seleccionados <- t(df_completo[,dea])
-  }else if(tipo == "microARN tras Supervivencia"){
+  }else if(tipo == "miRNAs tras Supervivencia"){
     mirnas_seleccionados <- t(df_completo[,cox])
-  }else if(tipo == "microARN tras Expresión Diferencial y Supervivencia"){
+  }else if(tipo == "miRNAs tras Expresión Diferencial y Supervivencia"){
     mirnas_seleccionados <- t(df_completo[,dea_y_cox])
   }
   
