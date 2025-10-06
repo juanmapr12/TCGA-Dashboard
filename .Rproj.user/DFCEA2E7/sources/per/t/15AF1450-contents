@@ -1,0 +1,1436 @@
+options(warn = -1)
+
+source("dependencias.R")
+source("scripts/preparacion_entorno.R")
+source("scripts/preprocesado_clinico.R")
+source("scripts/preprocesado_mirnas.R")
+source("scripts/analisis_expr_dif.R")
+source("scripts/datos_combinados.R")
+source("scripts/analisis_supervivencia.R")
+source("scripts/enriquecimiento.R")
+source("scripts/clustering.R")
+source("scripts/clasificacion_ML.R")
+
+
+ui <- dashboardPage(
+  
+  dashboardHeader(
+    title = "TCGA Dashboard",
+    tags$li(class = "dropdown",
+            tags$b(textOutput("proyecto_utilizado"), style = "color:white; font-size:17px;"))
+  ),
+  
+  dashboardSidebar(
+    sidebarMenuOutput("sidebar")
+  ),
+  
+  dashboardBody(
+    tags$head(
+      tags$style(HTML("
+      .slider-custom .js-irs-1 .irs-bar{
+        background: #f5f5f5;
+        height: 9.5px;
+      }
+      
+      .slider-custom .js-irs-1 .irs-line{
+        background: #3c8dbc;
+        height: 8px;
+      }
+      
+      .inputs-espaciados .shiny-input-container, 
+      .inputs-espaciados .form-group,
+      .inputs-espaciados .help-block{
+        margin-bottom: 22px !important;
+      }
+      
+      body, label, input, select, textarea, button, .dropdown span, .sidebar-menu .treeview-menu > li > a {
+        font-size: 18px !important;
+      }
+      
+      .center-col { 
+        text-align: center; 
+        margin-bottom: 30px;
+      }                       
+      
+      .center-col .shiny-input-container {
+        display: inline-block;                                
+        text-align: left;                                     
+      }
+      
+      .center-col .control-label {
+        width: 100%;                                          
+        text-align: center;                                 
+        margin-bottom: 6px;
+      }
+      "))
+    ),
+    
+    tabItems(
+      
+      #### Introducción: Preparación del entorno (ui) ####
+      tabItem(tabName = "intro",
+              fluidRow(
+                box(
+                  width = 8,
+                  title = "Datos del TCGA",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  selectInput("project", "Seleccione un proyecto TCGA:",
+                              choices = c(
+                                "TCGA-ACC", "TCGA-BLCA", "TCGA-CESC", "TCGA-CHOL", "TCGA-COAD",
+                                "TCGA-DLBC", "TCGA-GBM", "TCGA-HNSC", "TCGA-KICH", "TCGA-KIRC",
+                                "TCGA-KIRP", "TCGA-LAML", "TCGA-LGG", "TCGA-LIHC", "TCGA-LUAD",
+                                "TCGA-LUSC", "TCGA-MESO", "TCGA-OV", "TCGA-PAAD", "TCGA-PCPG",
+                                "TCGA-PRAD", "TCGA-READ", "TCGA-SARC", "TCGA-SKCM", "TCGA-STAD",
+                                "TCGA-TGCT", "TCGA-THCA", "TCGA-THYM", "TCGA-UCS", "TCGA-UCEC",
+                                "TCGA-UVM"
+                              ), select = "TCGA-HNSC", selectize = TRUE
+                  ),
+                  tags$div(style = "text-align: center;",
+                    helpText("Recuerde que puede buscar el proyecto que desee borrando y escribiendo su nombre dentro de la propia barra de búsqueda. Se descargarán tanto datos clínicos como de expresión de miRNAs.")
+                  ),
+                  useSweetAlert(),
+                  tags$div(style = "text-align: center;",
+                           actionButton("download", 
+                                        "Descargar/Obtener datos", 
+                                        style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"))
+                ),
+                
+                box(
+                  width = 4,
+                  title = "Aviso",
+                  status = "warning",
+                  solidHeader = TRUE,
+                  helpText(tags$strong("Los archivos del proyecto se almacenan en local (carpeta metadatos). Mientras más archivos contenga el proyecto más grande será la espera, por lo que le pedimos paciencia si la barra de progreso queda estancada. Si éste ya viene descargado (como el del caso de prueba que se da, el TCGA-HNSC) no será necesario descargar nada adicional."))
+                ),
+                
+                box(
+                  width = 12,
+                  title = "Estado de descarga",
+                  status = "info",
+                  solidHeader = TRUE,
+                  textOutput("status")
+                )
+              )
+              
+      ),
+      
+      #### Preprocesado mirnas (ui) ####
+      tabItem(tabName = "pre_mirna",
+              
+              fluidRow(
+                box(
+                  width = 12, title = "Parámetros a modificar en el preprocesado", status = "primary", solidHeader = TRUE,
+                  tags$div(class = "inputs-espaciados",
+                    helpText("Una vez normalizados los miRNAs a lecturas mapeadas por millón (lo que quiere decir que los conteos de expresión de todos los microARNs para una sola muestra no suman uno, sino un millón), se le pide al usuario que:"),
+                    numericInput(
+                      inputId = "porcentaje_max_nulos",
+                      label = "Establezca un porcentaje máximo de pacientes permitidos en los que la expresión de los miRNAs filtrados superen el valor 1 (un valor cercano al 0)",
+                      value = 50, min = 0, max = 100, step = 1
+                    ),
+                    helpText("Es decir, si se escoge el 50% (valor establecido por defecto) quiere decir que se rechazarán los miRNAs cuya expresión en pacientes es inferior a 1 en, al menos, el 50% del total."),
+                    numericInput(
+                      inputId = "porcentaje_max_na",
+                      label = "Establezca un porcentaje máximo de pacientes a los que se les permite que la expresión de los miRNAs filtrados sean un valor nulo",
+                      value = 10, min = 0, max = 20, step = 1
+                    ),
+                    helpText("Es decir, si se escoge el 10% (valor establecido por defecto) quiere decir que se rechazarán los miRNAs cuya expresión o conteo en la totalidad de pacientes superan el 10% de valores nulos. Se recomienda no superar el 20% para evitar introducir sesgos en la posterior imputación de estos valores."),
+                    numericInput(
+                      inputId = "valor_varianza",
+                      label = "Establezca un umbral de la varianza a superar por cada miRNA",
+                      value = 0.5, min = 0, max = 500, step = 0.1
+                    )
+                  ),
+                  helpText("Por último, se imputan los valores de expresión nulos resultantes mediante la función impute.knn del proyecto Bioconductor."),
+                  tags$div(style = "text-align: center;",
+                           actionButton(
+                             inputId = "preprocesado_mirnas",
+                             label = "Ejecutar preprocesado con estos valores",
+                             style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
+                           )
+                  )
+                ),
+                
+                box(
+                  width = 12,
+                  title = "Estado del preprocesado",
+                  status = "info",
+                  solidHeader = TRUE,
+                  uiOutput("estado_pre_mirnas")
+                )
+              )
+      ),
+      
+      
+      #### Preprocesado clínico (ui) ####
+      
+      tabItem(tabName = "pre_clinico",
+      
+              fluidRow(
+                box(
+                  width = 5,
+                  title = "Selección de características o columnas",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  uiOutput("pre_clinico_seleccion"),
+                  tags$div(style = "text-align: center;",
+                           actionButton(
+                             inputId = "preprocesado_clinico",
+                             label = "Ejecutar selección",
+                             style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
+                           )
+                  )
+                ),
+                box(
+                  width = 7, title = "Columnas filtradas en la selección", status = "info", solidHeader = TRUE,
+                  uiOutput("columnas_signif")
+                ),
+                tabBox(
+                  width = 7, side = "left",
+                  tabPanel(
+                    "Diagrama de barras resultante de la relación",
+                    plotOutput("grafica_pre_clinico")
+                  ),
+                  tabPanel(
+                    "Análisis univariado",
+                    tags$style("#univariado {font-size: 17px; color: darkblue;}"),
+                    verbatimTextOutput("univariado")
+                  )
+                )
+              )
+      ),
+      
+      
+      
+      #### Análisis de expresión diferencial (ui) ####
+      tabItem(tabName = "expr_dif",
+              
+              fluidRow(
+                box(
+                  width = 4, title = "Opciones para el análisis", status = "primary", solidHeader = TRUE,
+                  helpText("Análisis de Expresión Diferencial para los grupos de muestras Sano vs Enfermo. Se permite modificar los siguientes valores:"),
+                  radioButtons(
+                    inputId = "muestras",
+                    label = "¿Qué conjunto de muestras desea utilizar para el análisis?",
+                    choices = list("Totales", "Pareadas")
+                  ),
+                  numericInput(
+                    inputId = "logFC",
+                    label = "Establezca el umbral del log Fold Change para los miRNAs del eje OX+",
+                    value = 1.5, min = 0, max = 10, step = 0.1
+                  ),
+                  numericInput(
+                    inputId = "logFC_negativo",
+                    label = "Establezca el umbral del log Fold Change para los miRNAs del eje OX-",
+                    value = -1.5, min = -10, max = 0, step = 0.1
+                  ),
+                  numericInput(
+                    inputId = "p_valor_adj",
+                    label = "Establezca el valor de corte del eje OY, que se calcula aplicando el menos logaritmo en base 10 al p-valor ajustado",
+                    value = 9, min = 0, max = 1000, step = 1
+                  ),
+                  helpText("Para ayudarle en los cálculos, el valor de corte x correspondería con un p-valor ajustado de 1e-x"),
+                  tags$div(style = "text-align: center;",
+                           actionButton(
+                             inputId = "analisis_dea",
+                             label = "Ejecutar análisis",
+                             style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
+                           )
+                  )
+                ),
+                
+                tabBox(
+                  width = 8, side = "left",
+                  tabPanel("Resultados Volcano Plot", 
+                           plotOutput("volcano_plot",
+                                      height = "650px",
+                                      width = "100%")
+                  ),
+                  tabPanel("Tabla de miRNAs diferencialmente expresados (los de color rojo)",
+                          helpText(tags$strong("Recuerde que estos miRNAs son los que se utilizarán para análisis y modelos posteriores.")),
+                          DT::dataTableOutput("mirnas_filtrados")
+                  )
+                )
+              )
+      ),
+      
+      #### Análisis de supervivencia (ui) ####
+      tabItem(tabName = "surv",
+              
+              fluidRow(
+                box(
+                  width = 4, title = "Parámetros modelo de Cox", status = "primary", solidHeader = TRUE,
+                  helpText("Se buscará realizar un análisis para cada microARN de forma individual, comprobando si sus valores de expresión transformados en logaritmo en base 2 influyen en la supervivencia."),
+                  numericInput(
+                    inputId = "p_valor",
+                    label = "Establezca el p-valor a usar",
+                    value = 0.05, min = 0, max = 1, step = 0.01
+                  ),
+                  sliderInput(
+                    inputId = "minHR",
+                    label = "HR mínimo",
+                    value = 0.85, min = 0, max = 1, step = 0.01
+                  ),
+                  tags$div(class = "slider-custom",
+                           sliderInput(
+                             inputId = "maxHR",
+                             label = "HR máximo",
+                             value = 1.15, min = 1, max = 2, step = 0.01
+                           )
+                  ),
+                  tags$div(
+                    style = "text-align: center;",
+                    helpText("Se escogerán los miRNAs cuyo HR (Hazard Ratio) quede dentro de los intervalos azules")
+                  ),
+                  tags$div(style = "text-align: center;",
+                           actionButton(
+                             inputId = "analisis_cox",
+                             label = "Ejecutar análisis",
+                             style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
+                           )
+                  )
+                ),
+                
+                tabBox(
+                  width = 8, side = "left",
+                  tabPanel("Curva Kaplan-Meier",
+                           fluidRow(
+                             column(12, 
+                                    tags$div(class = "center-col", 
+                                      uiOutput("mirnas_supervivencia"),
+                                      plotOutput("kaplan_meier",
+                                                 height = "500px",
+                                                 width = "100%")
+                                            )
+                                    )
+                           )
+                  ),
+                  tabPanel("Tabla de miRNAs escogidos tras el análisis",
+                           helpText(tags$strong("Recuerde que estos miRNAs son los que se utilizarán para análisis y modelos posteriores.")),
+                           DT::dataTableOutput("tabla_mirnas_supervivencia")
+                  )
+                )
+              )
+      ),
+      
+      
+      #### Análisis de enriquecimiento [genes diana] (ui) ####
+      
+      tabItem(tabName = "enrich",
+              fluidRow(
+                tabBox(
+                  width = 4, side = "left",
+                  tabPanel(
+                    width = 12,
+                    title = "Genes diana",
+                    fluidRow(
+                      column(12, 
+                           div(class="center-col",
+                               radioButtons(
+                                 inputId = "mirna_genes",
+                                 label = "Seleccione los miRNAs de los que desea obtener sus genes diana:",
+                                 choices = list("Los resultantes tras Expresión Diferencial", "Los resultantes tras Análisis de Supervivencia", "La unión de ambos"),
+                                 selected = "La unión de ambos"
+                               ),
+                               radioButtons(
+                                   inputId = "tipo_info",
+                                   label = "Escoja el tipo de información que le gustaría obtener de la base de datos:",
+                                   choices = list("Interacciones validadas experimentalmente", "Predicciones computacionales", "Ambas"),
+                                   selected = "Ambas"
+                               ),
+                               uiOutput("siguiente_seccion"))
+                           )
+                    )
+                  ),
+                  tabPanel(
+                    title = "Análisis de enriquecimiento",
+                    fluidRow(
+                      column(12, 
+                             div(class = "center-col",
+                               radioButtons(
+                                 inputId = "tipo_enrich",
+                                 label = "Escoja el tipo de análisis:",
+                                 choices = list("GO","KEGG")
+                               ),
+                               numericInput(
+                                 inputId = "p_valor_enrich",
+                                 label = "Seleccione el p-valor",
+                                 value = 0.05, min = 0, max = 1, step = 0.01
+                               ),
+                               numericInput(
+                                 inputId = "q_valor_enrich",
+                                 label = "Seleccione el q-valor o p-valor ajustado",
+                                 value = 0.2, min = 0, max = 1, step = 0.01
+                               ),
+                               radioButtons(
+                                 inputId = "ont_enrich",
+                                 label = "Seleccione la ontología (sólo para GO)",
+                                 choices = list("Proceso biológico", 
+                                                "Función molecular",
+                                                "Componente celular"), 
+                                 selected = "Proceso biológico"
+                               ),
+                               numericInput(
+                                 inputId = "max_categorias",
+                                 label = "¿Cuántas categorías desea visualizar?",
+                                 value = 10, min = 1, max = 15, step = 1
+                               ),
+                               tags$div(style = "text-align: center;",
+                                        actionButton(
+                                          inputId = "enrich_analysis",
+                                          label = "Ejecutar análisis",
+                                          style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
+                                        )
+                                      )
+                                )
+                        )
+                    )
+                  )
+                ),
+                box(
+                  width = 8, title = "Resultados",
+                  status = "success", solidHeader = TRUE,
+                  plotOutput("enrich_barras",
+                             height = "600px",
+                             width = "100%")
+                )
+              )
+      ),
+      
+      
+      #### Clustering (ui) ####
+      
+      tabItem(tabName = "cluster", 
+              
+              fluidRow(
+                tabBox(
+                  width = 12, side = "left",
+                  tabPanel(
+                    title = "Parámetros dendrograma",
+                    fluidRow(
+                      column(6, 
+                             div(class = "center-col",
+                                 selectInput(
+                                   inputId = "mirnas_escogidos",
+                                   label = "Seleccione el conjunto de miRNAs a usar para representar sus distancias en el dendrograma",
+                                   choices = list("miRNAs tras Expresión Diferencial", "miRNAs tras Supervivencia", "miRNAs tras Expresión Diferencial y Supervivencia")
+                                 )
+                             )
+                      ),
+                      column(6, 
+                             div(class = "center-col",
+                                 selectInput(
+                                   inputId = "jerarquia",
+                                   label = "Seleccione el método de enlace que permitirá medir las distancias entre los miRNAs",
+                                   choices = list("ward.D2", "complete", "average")
+                                 )
+                             )
+                      )
+                    ),
+                    fluidRow(
+                      column(4, offset = 4,
+                             div(style = "text-align: center;",
+                               actionButton(
+                                 inputId = "dendrograma",
+                                 label = "Ver dendrograma",
+                                 style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
+                               )
+                             )
+                      )
+                    )
+                  ),
+                  tabPanel(
+                    title = "Parámetros heatmap",
+                    fluidRow(
+                      column(6, 
+                             div(class = "center-col",
+                                 sliderInput(
+                                   inputId = "k_clustering",
+                                   label = "Establezca el número de clústeres que desea formar",
+                                   value = 4, min = 2, max = 10, step = 1
+                                 )
+                             )
+                      ),
+                      column(6, 
+                             div(class = "center-col",
+                                 numericInput(
+                                   inputId = "umbral_heatmap",
+                                   label = "Seleccione el valor que limitará por arriba los valores representados en el mapa",
+                                   value = 5, min = 1, max = 15, step = 1
+                                 )
+                             )
+                      )
+                    ),
+                    fluidRow(
+                      column(4, offset = 4,
+                             div(style = "text-align: center;",
+                                 actionButton(
+                                   inputId = "heatmap",
+                                   label = "Ver mapa de calor",
+                                   style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
+                                 )
+                             )
+                      )
+                    )
+                  )
+                ),
+                tabBox(
+                  width = 12, side = "left",
+                  tabPanel(
+                    "Gráfico resultante",
+                    plotOutput("resultado_clustering", 
+                               height = "800px", 
+                               width = "100%")
+                  ),
+                  tabPanel(
+                    "Agrupamiento por clúster",
+                    uiOutput("parametro_clinicos_cluster"),
+                    uiOutput("resultados_clinicos_cluster"),
+                    DT::dataTableOutput("tabla_clinicos_cluster")
+                  )
+                )
+              )
+      ),
+      
+      
+      #### Clasificación ML (ui) ####
+      
+      tabItem(tabName = "clasif_ml", 
+              
+              fluidRow(
+                box(
+                  width = 4, title = "Opciones para el modelado", status = "primary", solidHeader = TRUE,
+                  numericInput(
+                    inputId = "proporcion",
+                    label = "Seleccione el porcentaje (entre 0 y 1) del tamaño del conjunto de entrenamiento del total de datos. El otro porcentaje restante irá para el conjunto de test",
+                    value = 60, min = 0, max = 100, step = 0.01
+                  ),
+                  numericInput(
+                    inputId = "particiones",
+                    label = "Seleccione el número de subconjuntos en el que desea separar el conjunto de entrenamiento dentro de la validación cruzada",
+                    value = 10, min = 0, max = 20, step = 1
+                  ),
+                  selectInput(
+                    inputId = "conjunto_datos_a_usar",
+                    label = "Seleccione el conjunto de datos",
+                    choices = list("Variables clínicas", "Variables clínicas + miRNAs tras Expresión Diferencial", "Variables clínicas + miRNAs tras Supervivencia", "Variables clínicas + miRNAs tras Expresión Diferencial y Supervivencia")
+                  ),
+                  radioButtons(
+                    inputId = "modelo_a_usar",
+                    label = "Seleccione el modelo de clasificación a usar",
+                    choices = list("Random Forest", "Regresión logística", "Gradient Boosting", "SVM (Support Vector Machines)")
+                  ),
+                  tags$div(style = "text-align: center;",
+                           actionButton(
+                             inputId = "ejecucion_tidymodels",
+                             label = "Ejecutar con estos valores",
+                             style = "background-color: #4CAF50; color: white; font-weight: bold; border: none;"
+                           )
+                  )
+                ),
+                
+                tabBox(
+                  width = 8, side = "left",
+                  tabPanel("Métricas obtenidas", 
+                           uiOutput("metricas_obtenidas")
+                  ),
+                  tabPanel("Curva ROC",
+                           plotOutput("curva_roc",
+                                      height = "600px", 
+                                      width = "100%"
+                           ),
+                           uiOutput("valor_auc")
+                  ),
+                  tabPanel("Matriz de confusión",
+                           plotOutput("matr_conf",
+                                      height = "600px", 
+                                      width = "100%"
+                           )
+                  )
+                )
+              )
+      )
+      
+    )
+  )
+)
+
+
+server <- function(input, output, session) {
+  
+  # Estados reactivos:
+  descargado_introduccion <- reactiveVal(FALSE)
+  
+  observeEvent(input$download, {
+    descargado_introduccion(TRUE)
+  })
+  
+  descargado_clinico <- reactiveVal(FALSE)
+  
+  observeEvent(input$preprocesado_clinico, {
+    descargado_clinico(TRUE)
+  })
+  
+  descargado_mirnas <- reactiveVal(FALSE)
+  
+  observeEvent(input$preprocesado_mirnas, {
+    descargado_mirnas(TRUE)
+  })
+  
+  ejecutado_expr_dif <- reactiveVal(FALSE)
+  
+  observeEvent(input$analisis_dea, {
+    ejecutado_expr_dif(TRUE)
+  })
+  
+  ejecutado_supervivencia <- reactiveVal(FALSE)
+  
+  observeEvent(input$analisis_cox, {
+    ejecutado_supervivencia(TRUE)
+  })
+  
+  ejecutado_enriquecimiento <- reactiveVal(FALSE)
+  
+  observeEvent(input$enrich_analysis, {
+    ejecutado_enriquecimiento(TRUE)
+  })
+  
+  ejecutado_clustering <- reactiveVal(FALSE)
+  
+  observeEvent(input$heatmap, {
+    ejecutado_clustering(TRUE)
+  })
+  
+  ejecutado_ml <- reactiveVal(FALSE)
+  
+  observeEvent(input$ejecucion_tidymodels, {
+    ejecutado_ml(TRUE)
+  })
+  
+  
+  # Renderizamos el sidebar en función del paso que se realize:
+  output$sidebar <- renderMenu({
+    sidebarMenu(
+      menuItem(
+        if (descargado_introduccion()) "Introducción✔️" else "Introducción",
+        tabName = "intro",
+        icon = icon("book-open")
+      ),
+      menuItem(
+         if (descargado_mirnas()) "Preprocesado miRNAs✔️" else "Preprocesado miRNAs",
+         tabName = "pre_mirna", icon = icon("dna")),
+      menuItem(
+         if (descargado_clinico()) "Preprocesado clínico✔️" else "Preprocesado clínico",
+         tabName = "pre_clinico", icon = icon("stethoscope")),
+      menuItem(if (ejecutado_expr_dif()) "Expresión diferencial✔️" else "Expresión diferencial", 
+               tabName = "expr_dif", icon = icon("volcano")),
+      
+      menuItem(if (ejecutado_supervivencia()) "Supervivencia✔️" else "Supervivencia",  
+               tabName = "surv", icon = icon("line-chart")),
+      
+      menuItem(if (ejecutado_enriquecimiento()) "Enriquecimiento✔️" else "Enriquecimiento", 
+               tabName = "enrich", icon = icon("chart-bar")),
+      
+      menuItem(if (ejecutado_clustering()) "Clustering✔️" else "Clustering", 
+               tabName = "cluster", icon = icon("circle-nodes")),
+      
+      menuItem(if (ejecutado_ml()) "Clasificación ML✔️" else "Clasificación ML", 
+               tabName = "clasif_ml", icon = icon("robot"))
+    )
+  })
+  
+  
+  #### Introducción: Preparación del entorno (server) ####
+  
+  proyecto <- eventReactive(input$download, {
+    input$project
+  })
+  
+  output$proyecto_utilizado <- renderText(
+    paste0("→ El tipo de cáncer a analizar es el ", proyecto(), ". Si selecciona otro distinto, es necesario ejecutar todos los análisis que se deseen desde cero.")
+  )
+  
+  
+  observeEvent(input$download, {
+    
+    # Ruta donde se guardaría el archivo simulado
+    file_name <- paste0("metadatos/", proyecto())
+    
+    if (file.exists(file_name)) {
+      # Caso: ya descargado
+      output$status <- renderText(
+          paste("Los datos del proyecto", proyecto(), "ya están listos. No hace falta descargar nada.")
+      )
+      descargado_clinico(FALSE)
+      descargado_mirnas(FALSE)
+      ejecutado_expr_dif(FALSE)
+      ejecutado_supervivencia(FALSE)
+      ejecutado_enriquecimiento(FALSE)
+      ejecutado_clustering(FALSE)
+      ejecutado_ml(FALSE)
+      
+    } else {
+      # Caso: no descargado → lanzamos descarga de todo
+      
+      sendSweetAlert(
+        session = session,
+        title = "Espere un poco...",
+        text = "Se están descargando los datos solicitados. Por favor, espere.",
+        type = "info"
+      )
+      
+      descarga_mirnas(input$project)
+      descarga_clinicos(input$project)
+      
+      closeSweetAlert(session)
+      
+      sendSweetAlert(
+        session = session,
+        title ="¡Descarga completada!",
+        type = "success"
+      )
+      
+      elimina_carpetas_GDC()
+      
+      output$status <- renderText(
+        paste("Datos del proyecto", proyecto(), "descargados correctamente.")
+      )
+      
+      descargado_clinico(FALSE)
+      descargado_mirnas(FALSE)
+      ejecutado_expr_dif(FALSE)
+      ejecutado_supervivencia(FALSE)
+      ejecutado_enriquecimiento(FALSE)
+      ejecutado_clustering(FALSE)
+      ejecutado_ml(FALSE)
+    } 
+  })
+  
+  
+  #### Preprocesado mirnas (server) ####
+  
+  
+  df_resultado_pre_mirnas <- eventReactive(input$preprocesado_mirnas, {
+    preprocesado_mirnas(
+      df = crea_df_mirnas(proyecto()),
+      project = proyecto(),
+      porcentaje_max_nulos = input$porcentaje_max_nulos,
+      porcentaje_max_na = input$porcentaje_max_na, 
+      valor_varianza = input$valor_varianza
+    )
+  })
+  
+  num_mirnas_selecc <- reactive({
+    nrow(df_resultado_pre_mirnas())
+  })
+  
+  output$estado_pre_mirnas <- renderUI(
+    "Por ahora nada. Recuerde descargar u obtener los datos del proyecto deseado para su análisis en la ventana de 'Introducción' antes de continuar"
+  )
+  
+  
+  observeEvent(input$preprocesado_mirnas, {
+    
+    validate(
+      need(input$download, "⚠️ Recuerde descargar u obtener los datos del proyecto deseado para su análisis antes de continuar")
+    )
+    
+    sendSweetAlert(
+      session = session,
+      title = "Espere un poco...",
+      text = "Se está ejecutando el preprocesado con los parámetros elegidos. Suele tardar entre 2 y 4 minutos.",
+      type = "info"
+    )
+    
+    notif_mirnas <- showNotification("Espere un poco...", duration = NULL, type = "warning")
+    
+    if(nrow(df_resultado_pre_mirnas()) > 0){
+      output$estado_pre_mirnas <- renderUI(
+        HTML(paste0("<strong>Datos preprocesados correctamente. Hay ", 
+                    num_mirnas_selecc(), " miRNAs.</strong>"))
+      )
+      closeSweetAlert(session)
+      removeNotification(notif_mirnas)
+    }
+  })
+  
+  
+  #### Preprocesado clínico (server) ####
+  
+  observeEvent(input$preprocesado_clinico, {
+    
+    validate(
+      need(input$download, "⚠️ Debe primero descargar u obtener los datos del proyecto deseado desde la ventana de 'Introducción'")
+    )
+    
+    sendSweetAlert(
+      session = session,
+      title = "Espere un poco...",
+      text = "Se está ejecutando el filtrado de características. Suele tardar entre 1 y 2 minutos.",
+      type = "info"
+    )
+    
+    notif_clinica <- showNotification("Espere un poco...", duration = NULL, type = "warning")
+    
+    df_resultado_pre_clinico()
+    
+    if(ncol(df_resultado_pre_clinico()) == length(lista_signif())){
+      closeSweetAlert(session)
+      removeNotification(notif_clinica)
+    }
+  })
+  
+  output$pre_clinico_seleccion <- renderUI({
+    texto_principal <- "Se ha optado por una selección de características manual, con criterios decididos por el autor. Concretamente:"
+    elementos <-  c("De todas las columnas clínicas se eliminan las que tengan un porcentaje elevado de valores faltantes. Se ha escogido el 80% como umbral inferior.",
+                    "Después se filtran aquellas que tengan relación con la que se considera la variable objetivo, el estado vital del paciente. La relación se comprueba a partir de test paramétricos, no paramétricos o de independencia. Si ésta es estadísticamente significativa (p-valor menor que 0.05) se selecciona la columna.")
+      
+    HTML(paste0(
+      "<p> <strong>", texto_principal, "</strong> </p>",
+      "<ul>",
+      paste("<p> <li>", elementos, "</li> </p>", collapse = ""),
+      "</ul>"
+    ))
+  })
+  
+  df_resultado_pre_clinico <- eventReactive(input$preprocesado_clinico, {
+    preprocesado_clinico(
+      df = crea_df_clinico(proyecto())
+    )[[1]]
+  })
+  
+  lista_signif <- eventReactive(input$preprocesado_clinico, {
+    validate(
+      need(input$download, "⚠️ Debe primero descargar u obtener los datos del proyecto deseado desde la ventana de 'Introducción'")
+    )
+    preprocesado_clinico(
+      df = crea_df_clinico(proyecto())
+    )[[2]]
+  })
+  
+  output$columnas_signif <- renderUI({
+    selectInput("caracteristica",
+                "Elija una de ellas para ver su análisis y su relación con la variable objetivo 'vital_status'",
+                choices = lista_signif()
+    )
+  })
+  
+  grafica_caracteristica_selecc <- reactive({
+    grafica_relacion_vitalstatus(
+      df = df_resultado_pre_clinico(),
+      col = input$caracteristica
+    )
+  })
+  
+  output$grafica_pre_clinico <- renderPlot({
+    req(input$caracteristica)
+    grafica_caracteristica_selecc()
+  })
+  
+  datos_univariados_caracteristica_selecc <- reactive({
+    datos_analisis_univariado(
+      df = df_resultado_pre_clinico(),
+      col = input$caracteristica
+    )
+  })
+  
+  output$univariado <- renderPrint({
+    req(input$caracteristica)
+    datos_univariados_caracteristica_selecc()
+  })
+  
+  
+  #### Combinación de datos clínicos y de expresiones ####
+  
+  df_conjunto <- reactive({
+    req(input$preprocesado_mirnas)
+    req(input$preprocesado_clinico)
+    limpieza_final(
+      transformacion_variables(
+        procesar_datos_mirna_y_clinicos(
+          df_resultado_pre_mirnas(),
+          df_resultado_pre_clinico()
+        ),
+        df_resultado_pre_clinico()
+      ), 
+      df_resultado_pre_mirnas()
+    )[[1]]
+  })
+  
+  df_resultado_pre_mirnas_filtrado <- reactive({
+    req(input$preprocesado_mirnas)
+    req(input$preprocesado_clinico)
+    limpieza_final(
+      transformacion_variables(
+        procesar_datos_mirna_y_clinicos(
+          df_resultado_pre_mirnas(),
+          df_resultado_pre_clinico()
+        ),
+        df_resultado_pre_clinico()
+      ), 
+      df_resultado_pre_mirnas()
+    )[[2]]
+  })
+  
+  
+  #### Análisis de expresión diferencial (server) ####
+  
+  resultados_dea <- eventReactive(input$analisis_dea, {
+    validate(
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    analisis_expr_dif(
+      muestras_escogidas = input$muestras,
+      df = df_resultado_pre_mirnas(),
+      df_completo = df_conjunto()
+    )
+  })
+  
+  grafica_dea <- eventReactive(input$analisis_dea, {
+    volcano(
+      tabla_resultados = resultados_dea(),
+      umbral_logFC = input$logFC,
+      umbral_logFC_negativo = input$logFC_negativo,
+      umbral_pvalor_ajustado = input$p_valor_adj
+    )
+  })
+  
+  output$volcano_plot <- renderPlot({
+    req(input$analisis_dea)
+    grafica_dea()
+  })
+  
+  resultados_dea_tras_filtro <- eventReactive(input$analisis_dea, {
+    validate(
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    mirnas_que_cumplen_ambos_filtros(
+      resultado_analisis = resultados_dea(),
+      umbral_logFC = input$logFC, 
+      umbral_logFC_negativo = input$logFC_negativo,
+      umbral_pvalor_ajustado = input$p_valor_adj
+    )
+  })
+  
+  output$mirnas_filtrados <- DT::renderDataTable({
+    req(input$analisis_dea)
+    resultados_dea_tras_filtro()
+  }, options = list(
+      pageLength = 10,        # número de filas visibles
+      scrollY = "500px",      # altura fija
+      scrollCollapse = TRUE,  # que no genere espacio extra si hay pocas filas
+      scrollX = TRUE          # scroll horizontal
+  ))
+  
+  
+  
+  #### Análisis de supervivencia (server) ####
+  
+  
+  resultados_cox <- eventReactive(input$analisis_cox, {
+    validate(
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    mirnas_modelo_cox(
+      p_value = input$p_valor,
+      hazard_ratio_inferior = input$minHR,
+      hazard_ratio_superior = input$maxHR,
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      df_completo = df_conjunto()
+    )[[1]]
+  })
+  
+  pvalor_cox <- eventReactive(input$analisis_cox, {
+    validate(
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    mirnas_modelo_cox(
+      p_value = input$p_valor,
+      hazard_ratio_inferior = input$minHR,
+      hazard_ratio_superior = input$maxHR,
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      df_completo = df_conjunto()
+    )[[2]]
+  })
+  
+  hr_cox <- eventReactive(input$analisis_cox, {
+    validate(
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    mirnas_modelo_cox(
+      p_value = input$p_valor,
+      hazard_ratio_inferior = input$minHR,
+      hazard_ratio_superior = input$maxHR,
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      df_completo = df_conjunto()
+    )[[3]]
+  })
+  
+  num_mirnas_filtrados <- eventReactive(input$analisis_cox, {
+    validate(
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    mirnas_modelo_cox(
+      p_value = input$p_valor,
+      hazard_ratio_inferior = input$minHR,
+      hazard_ratio_superior = input$maxHR,
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      df_completo = df_conjunto()
+    )[[4]]
+  })
+  
+  observeEvent(input$analisis_cox, {
+    
+    validate(
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    
+    notif_supervivencia <- showNotification("Espere un poco...", duration = NULL, type = "warning")
+    
+    resultados_cox()
+    
+    if(length(resultados_cox()) > 0){
+      removeNotification(notif_supervivencia)
+    }
+  })
+  
+  output$mirnas_supervivencia <- renderUI({
+    selectInput("columna_mirnas_supervivencia",
+                paste("Seleccione uno de los", num_mirnas_filtrados(), "miRNAs obtenidos"),
+                choices = resultados_cox()
+    )
+  })
+  
+  grafica_km_mirnas <- reactive({
+    curva_kaplan_meier(
+      lista_mirnas = resultados_cox(),
+      lista_hr = hr_cox(),
+      mirna_escogido = input$columna_mirnas_supervivencia,
+      df_completo = df_conjunto()
+    )
+  })
+  
+  output$kaplan_meier <- renderPlot({
+    req(input$columna_mirnas_supervivencia)
+    grafica_km_mirnas()
+  })
+  
+  tabla_mirnas_supervivencia <- reactive({
+    datos_modelo_tras_cox(
+      lista_mirnas = resultados_cox(),
+      lista_pvalor = pvalor_cox(),
+      lista_hr = hr_cox()
+    )
+  })
+  
+  output$tabla_mirnas_supervivencia <- DT::renderDataTable({
+    req(input$columna_mirnas_supervivencia)
+    tabla_mirnas_supervivencia()
+  }, options = list(
+    pageLength = 10,        # número de filas visibles
+    scrollY = "500px",      # altura fija
+    scrollCollapse = TRUE,  # que no genere espacio extra si hay pocas filas
+    scrollX = TRUE          # scroll horizontal
+  ))
+  
+  
+  #### Análisis de enriquecimiento [genes diana] (server) ####
+  
+  mirnas_seleccionados <- reactive({
+    validate(
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    validate(
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    if(input$mirna_genes == "Los resultantes tras Análisis de supervivencia"){
+      resultados_cox()
+    }else if(input$mirna_genes == "Los resultantes tras Expresión diferencial"){
+      rownames(resultados_dea_tras_filtro())
+    }else if(input$mirna_genes == "La unión de ambos"){
+      union(resultados_cox(), rownames(resultados_dea_tras_filtro()))
+    }
+  })
+  
+  genes_diana <- reactive({
+    resultados_genes_diana(
+      mirnas_seleccionados = mirnas_seleccionados(),
+      tipo_datos = input$tipo_info
+    )
+  })
+  
+  output$siguiente_seccion <- renderUI({
+    HTML("<strong>Una vez configurada esta parte, pase a la siguiente pestaña de esta misma ventana ↑</strong>")
+  })
+  
+  datos_enriquecimiento <- eventReactive(input$enrich_analysis, {
+    validate(
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    validate(
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    validate(
+      need(is.data.frame(genes_diana()) && nrow(genes_diana()) > 0 && ncol(genes_diana()) > 0, 
+           "⚠️ Con la configuración de parámetros escogida no se ha podido obtener ningún gen diana. Por favor, escoja otros parámetros o suavize las condiciones sobre el análisis escogido.")
+    )
+    analisis_enriquecimiento(
+      genes_diana = genes_diana(),
+      tipo_analisis = input$tipo_enrich,
+      p_valor = input$p_valor_enrich,
+      q_valor = input$q_valor_enrich,
+      ontologia = input$ont_enrich
+    )
+  })
+  
+  observeEvent(input$enrich_analysis, {
+    validate(
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    validate(
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    
+    notif_enriquecimiento <- showNotification("Espere un poco...", duration = NULL, type = "warning")
+    
+    datos_enriquecimiento()
+    
+    if(nrow(datos_enriquecimiento()) > 0){
+      removeNotification(notif_enriquecimiento)
+    }
+  })
+  
+  tipo <- eventReactive(input$enrich_analysis, {
+    input$tipo_enrich
+  })
+  
+  categorias <- eventReactive(input$enrich_analysis, {
+    input$max_categorias
+  })
+  
+  output$enrich_barras <- renderPlot({
+    req(input$enrich_analysis)
+    diagrama_barras(
+      enrich_object = datos_enriquecimiento(),
+      max_categorias = categorias(),
+      titulo = paste("Diagrama de barras para el análisis", tipo())
+    )
+  })
+  
+  
+  
+  #### Clustering (server) ####
+  
+  
+  # guardamos qué botón fue pulsado
+  grafico_a_mostrar <- reactiveVal(NULL)
+  
+  observeEvent(input$dendrograma, {
+    grafico_a_mostrar("dendrograma")
+  })
+  
+  observeEvent(input$heatmap, {
+    grafico_a_mostrar("heatmap")
+  })
+  
+  union_mirnas <- reactive({
+    validate(
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    validate(
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    union(resultados_cox(), rownames(resultados_dea_tras_filtro()))
+  })
+  
+  resultado_dendrograma <- eventReactive(input$dendrograma, {
+    validate(
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    clustering_dendrograma(
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      df_completo = df_conjunto(),
+      tipo = input$mirnas_escogidos,
+      dea = rownames(resultados_dea_tras_filtro()),
+      cox = resultados_cox(),
+      dea_y_cox = union_mirnas(),
+      metodo_jerarquico = input$jerarquia
+    )
+  })
+    
+  resultado_heatmap <- eventReactive(input$heatmap, {
+    validate(
+      need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    validate(
+      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
+    )
+    clustering_heatmap(
+      mirnas_escalados = resultado_dendrograma()[[1]],
+      conglomerado = resultado_dendrograma()[[2]],
+      k = input$k_clustering,
+      umbral = input$umbral_heatmap
+    )
+  })
+  
+  output$resultado_clustering <- renderPlot({
+    req(grafico_a_mostrar())
+    
+    if (grafico_a_mostrar() == "dendrograma") {
+      resultado_dendrograma()
+    } else if (grafico_a_mostrar() == "heatmap") {
+      resultado_heatmap()
+    }
+  })
+  
+  output$parametro_clinicos_cluster <- renderUI({
+    fluidRow(
+      column(6, 
+             div(class = "center-col",
+                 selectInput(
+                   inputId = "num_cluster_selecc",
+                   label = "Seleccione el cluster con el que desee trabajar",
+                   choices = setNames(1:input$k_clustering, paste("Cluster", 1:input$k_clustering)),
+                   selected = 1
+                 )
+             )
+      ),
+      column(6,
+             div(class = "center-col",
+                 numericInput(
+                   inputId = "limite_selecc",
+                   label = "Establezca el número de muestras con el que desea realizar el análisis",
+                   value = 5, min = 1, max = 50, step = 1
+                 )
+             )
+      )
+      # donde los miRNAs del clúster escogido se encuentran diferencialmente expresados según el criterio de la izquierda
+    )
+  })
+  
+  output$resultados_clinicos_cluster <- renderUI({
+    fluidRow(
+      tabBox(
+        width = 12, side = "left",
+        tabPanel(
+          "Tabla de miRNAs",
+          div(style = "margin-top: 30px;",
+              DT::dataTableOutput("mirnas_cluster")
+          )
+        ),
+        tabPanel(
+          "Tabla con las variables clínicas",
+          div(style = "margin-top: 30px;",
+              DT::dataTableOutput("variables_clinicas_cluster")
+          )
+        ),
+        tabPanel(
+          "Análisis univariado de variables clínicas",
+          column(12, 
+                 div(class = "center-col",
+                     selectInput(
+                       inputId = "columna_selecc",
+                       label = "Seleccione la columna clínica que desee visualizar dentro del análisis",
+                       choices = c("tipo_muestra", lista_signif())
+                     )
+                 )
+          ),
+          plotOutput("analisis_univariado_cluster")
+        )
+      )
+    )
+  })
+  
+  tabla_mirnas_cluster <- reactive({
+    tabla_de_datos_por_cada_cluster(
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      agrupamiento_mirnas = resultado_heatmap(),
+      cluster = input$num_cluster_selecc,
+      limite = input$limite_selecc,
+      clinical_df = df_resultado_pre_clinico(),
+      df_completo = df_conjunto()
+    )[[1]]
+  })
+  
+  tabla_clinicas_cluster <- reactive({
+    tabla_de_datos_por_cada_cluster(
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      agrupamiento_mirnas = resultado_heatmap(),
+      cluster = input$num_cluster_selecc,
+      limite = input$limite_selecc,
+      clinical_df = df_resultado_pre_clinico(),
+      df_completo = df_conjunto()
+    )[[2]]
+  })
+  
+  muestras_sobreexpresadas <- reactive({
+    tabla_de_datos_por_cada_cluster(
+      df_mirnas = df_resultado_pre_mirnas_filtrado(),
+      agrupamiento_mirnas = resultado_heatmap(),
+      cluster = input$num_cluster_selecc,
+      limite = input$limite_selecc,
+      clinical_df = df_resultado_pre_clinico(),
+      df_completo = df_conjunto()
+    )[[3]]
+  })
+  
+  
+  output$mirnas_cluster <- renderDataTable({
+    tabla_mirnas_cluster()
+  }, options = list(
+    pageLength = 10,        # número de filas visibles
+    scrollY = "800px",      # altura fija
+    scrollCollapse = TRUE,  # que no genere espacio extra si hay pocas filas
+    scrollX = TRUE,         # scroll horizontal
+    fixedColumns = list(leftColumns = 1)
+  ))
+  
+  output$variables_clinicas_cluster <- renderDataTable({
+    tabla_clinicas_cluster()
+  }, options = list(
+    pageLength = 4,        # número de filas visibles
+    scrollY = "600px",      # altura fija
+    scrollCollapse = TRUE,  # que no genere espacio extra si hay pocas filas
+    scrollX = TRUE,          # scroll horizontal
+    fixedColumns = list(leftColumns = 1)
+  ))
+  
+  plot_variable_clinica_selecc <- reactive({
+    analisis_columna_clinica(
+      df_completo = df_conjunto(),
+      conj_muestras_sobreexpresadas = muestras_sobreexpresadas(),
+      variable_seleccionada = input$columna_selecc
+    )
+  })
+  
+  output$analisis_univariado_cluster <- renderPlot({
+    plot_variable_clinica_selecc()
+  })
+  
+  
+  
+  #### Clasificación ML (server) ####
+  
+  
+  modelo_a_usar <- eventReactive(input$ejecucion_tidymodels, {
+    input$modelo_a_usar
+  })
+  
+  df_a_usar <- eventReactive(input$ejecucion_tidymodels, {
+    df_escogido(
+      datos_a_usar = input$conjunto_datos_a_usar,
+      df_clinico = df_resultado_pre_clinico(),
+      df_completo = df_conjunto(),
+      mirnas_dea = rownames(resultados_dea_tras_filtro()),
+      mirnas_cox = resultados_cox()
+    )
+  })
+  
+  lista_elementos <- reactive({
+    validate(
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    validate(
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    pipeline_tidyverse_1(
+      df = df_a_usar(),
+      p = input$proporcion,
+      folds = input$particiones,
+      modelo_a_ejecutar = input$modelo_a_usar
+    )
+  })
+  
+  resultado_final <- eventReactive(input$ejecucion_tidymodels, {
+    validate(
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    validate(
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    pipeline_tidyverse_2(
+      model_results_after_tuning = lista_elementos()[[1]],
+      model_tune_wf = lista_elementos()[[2]], 
+      data_split = lista_elementos()[[3]]
+    )
+  })
+  
+  observeEvent(input$ejecucion_tidymodels, {
+    validate(
+      need(input$analisis_dea & ejecutado_expr_dif(), "⚠️ Debe ejecutar primero el análisis de Expresión diferencial. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    validate(
+      need(input$analisis_cox & ejecutado_supervivencia(), "⚠️ Debe ejecutar primero el análisis de supervivencia. Una vez lo haga vuelva a ejecutar este análisis.")
+    )
+    
+    sendSweetAlert(
+      session = session,
+      title = "Espere un poco...",
+      text = "Se están ejecutando los pasos necesarios para el modelo escogido.",
+      type = "info"
+    )
+    
+    notif_modelo <- showNotification("Espere un poco...", duration = NULL, type = "warning")
+    
+    resultado_final()
+    
+    if(length(resultado_final()) > 0){
+      closeSweetAlert(session)
+      removeNotification(notif_modelo)
+    }
+  })
+  
+  output$metricas_obtenidas <- renderUI({
+    tagList(
+      h4(paste("Resultados del modelo",modelo_a_usar(), "para la clasificación de la variable 'vital_status'")),
+      tags$ul(
+        tags$li(HTML(paste0("<strong>Accuracy:</strong> ", round(resultado_final()[[1]], 3)))),
+        tags$li(HTML(paste0("<strong>Precision:</strong> ", round(resultado_final()[[2]], 3)))),
+        tags$li(HTML(paste0("<strong>Recall:</strong> ", round(resultado_final()[[3]], 3)))),
+        tags$li(HTML(paste0("<strong>F1 Score:</strong> ", round(resultado_final()[[4]], 3)))),
+        tags$li(HTML(paste0("<strong>AUC (Area under curve):</strong> ", round(resultado_final()[[5]], 3))))
+      )
+    )
+  })
+  
+  output$valor_auc <- renderUI(
+    HTML(paste("El valor AUC (Area under curve) es de: <strong>",
+               round(resultado_final()[[5]],3),
+               "</strong>"))
+  )
+  
+  output$curva_roc <- renderPlot(
+    resultado_final()[[6]]
+  )
+  
+  output$matr_conf <- renderPlot(
+    resultado_final()[[7]]
+  )
+  
+}
+
+shinyApp(ui, server)
