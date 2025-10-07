@@ -227,7 +227,7 @@ ui <- dashboardPage(
                   numericInput(
                     inputId = "p_valor_adj",
                     label = "Establezca el valor de corte del eje OY, que se calcula aplicando el menos logaritmo en base 10 al p-valor ajustado",
-                    value = 9, min = 0, max = 1000, step = 1
+                    value = 3, min = 0, max = 1000, step = 1
                   ),
                   helpText("Para ayudarle en los cálculos, el valor de corte x correspondería con un p-valor ajustado de 1e-x"),
                   tags$div(style = "text-align: center;",
@@ -293,7 +293,7 @@ ui <- dashboardPage(
                 
                 tabBox(
                   width = 8, side = "left",
-                  tabPanel("Curva Kaplan-Meier",
+                  tabPanel("Curvas de Kaplan-Meier",
                            fluidRow(
                              column(12, 
                                     tags$div(class = "center-col", 
@@ -422,7 +422,7 @@ ui <- dashboardPage(
                                  selectInput(
                                    inputId = "jerarquia",
                                    label = "Seleccione el método de enlace que permitirá medir las distancias entre los miRNAs",
-                                   choices = list("ward.D2", "complete", "average")
+                                   choices = list("ward.D2", "complete", "average", "simple")
                                  )
                              )
                       )
@@ -502,8 +502,8 @@ ui <- dashboardPage(
                   width = 4, title = "Opciones para el modelado", status = "primary", solidHeader = TRUE,
                   numericInput(
                     inputId = "proporcion",
-                    label = "Seleccione el porcentaje (entre 0 y 1) del tamaño del conjunto de entrenamiento del total de datos. El otro porcentaje restante irá para el conjunto de test",
-                    value = 60, min = 0, max = 100, step = 0.01
+                    label = "Seleccione el porcentaje del tamaño del conjunto de entrenamiento del total de datos. El otro porcentaje restante irá para el conjunto de test",
+                    value = 60, min = 0, max = 100, step = 1
                   ),
                   numericInput(
                     inputId = "particiones",
@@ -659,7 +659,7 @@ server <- function(input, output, session) {
     if (file.exists(file_name)) {
       # Caso: ya descargado
       output$status <- renderText(
-          paste("Los datos del proyecto", proyecto(), "ya están listos. No hace falta descargar nada.")
+          paste("Los datos del proyecto", proyecto(), "ya están listos para su uso.")
       )
       descargado_clinico(FALSE)
       descargado_mirnas(FALSE)
@@ -906,9 +906,6 @@ server <- function(input, output, session) {
   resultados_dea_tras_filtro <- eventReactive(input$analisis_dea, {
     validate(
       need(input$preprocesado_mirnas & descargado_mirnas(), "⚠️ Debe ejecutar primero el preprocesado de los miRNAs. Una vez lo haga vuelva a ejecutar el análisis.")
-    )
-    validate(
-      need(input$preprocesado_clinico & descargado_clinico(), "⚠️ Debe ejecutar primero el preprocesado clínico. Una vez lo haga vuelva a ejecutar el análisis.")
     )
     mirnas_que_cumplen_ambos_filtros(
       resultado_analisis = resultados_dea(),

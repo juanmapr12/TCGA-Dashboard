@@ -1,9 +1,9 @@
 {
     "id": "15AF1450",
-    "path": "C:/Users/Usuario/OneDrive/Escritorio/proyecto/TCGA-Dashboard/app.R",
+    "path": "C:/Users/Usuario/OneDrive/Escritorio/TCGA-ML-Dashboard/app.R",
     "project_path": "app.R",
     "type": "r_source",
-    "hash": "3535308909",
+    "hash": "3522876090",
     "contents": "",
     "dirty": false,
     "created": 1759709902295.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "737,19",
-        "scrollLine": "720"
+        "cursorPosition": "1061,163",
+        "scrollLine": "1048"
     },
     "folds": "",
-    "lastKnownWriteTime": 1759769334,
+    "lastKnownWriteTime": 1759846521,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1759769334345,
+    "last_content_update": 1759846521535,
     "read_only": false,
     "read_only_alternatives": []
 }

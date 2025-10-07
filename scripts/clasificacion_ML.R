@@ -21,7 +21,7 @@ pipeline_tidyverse_1 <- function(df, p, folds, modelo_a_ejecutar){
   set.seed(123)
   # Separamos en entrenamiento y prueba de manera estratificada:
   data_split <- initial_split(df, 
-                             prop = p, 
+                             prop = round(p / 100, 2), 
                              strata = vital_status)
   data_train <- training(data_split)
   data_test  <- testing(data_split)

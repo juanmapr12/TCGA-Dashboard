@@ -60,7 +60,7 @@ curva_kaplan_meier <- function(lista_mirnas, lista_hr, mirna_escogido, df_comple
                    type = "kaplan-meier")
   
   plot <- ggsurvplot(fit = curva, data = datos_supervivencia_mirnas, 
-             title = paste("Curva de Kaplan-Meier para", 
+             title = paste("Curvas de Kaplan-Meier para", 
                            mirna_escogido),
              xlab = "Tiempo (días)", ylab = "Prob. de supervivencia")
   
