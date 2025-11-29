@@ -13,7 +13,7 @@ Por otro lado, se permite al usuario aplicar dos técnicas propias del Machine L
 
 En ambos casos la aplicación web proporciona la posibilidad de modificar los parámetros de modelos o variables en las que se apoyan estas técnicas, permitiendo además una rápida visualización de los resultados más significativos.
 
-## 📘 Pasos a seguir en la instalación
+## 📘 Manual de instalación de la app
 
 1. Instalar R. Se recomienda la versión [4.4.1](https://cran.r-project.org/bin/windows/base/old/4.4.1/)
 
