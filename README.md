@@ -13,7 +13,7 @@ Por otro lado, se permite al usuario aplicar dos técnicas propias del Machine L
 
 En ambos casos la aplicación web proporciona la posibilidad de modificar los parámetros de modelos o variables en las que se apoyan estas técnicas, permitiendo además una rápida visualización de los resultados más significativos.
 
-## Pasos a seguir en la instalación
+## 📘 Pasos a seguir en la instalación
 
 1. Instalar R. Se recomienda la versión [4.4.1](https://cran.r-project.org/bin/windows/base/old/4.4.1/)
 
@@ -35,6 +35,6 @@ En ambos casos la aplicación web proporciona la posibilidad de modificar los pa
 
 Una vez seguidos estos pasos, ya tendremos a la aplicación corriendo en local. Si surgiese algún problema durante la instalación o durante la ejecución de la aplicación, se recomienda borrar todos los objetos del espacio de trabajo (icono de la escoba en la ventana de la esquina inferior derecha), restaurar R (desde el menú: **Session -> Restart R**) y volver a ejecutar el último paso.
 
-## Manual de usuario
+## 📗 Manual de usuario
 
 Se puede obtener descargando el siguiente ![archivo](./archivos_readme/Manual_usuario_TCGA-Dashboard.pdf).
