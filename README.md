@@ -37,3 +37,4 @@ Una vez seguidos estos pasos, ya tendremos a la aplicación corriendo en local. 
 
 ## Manual de usuario
 
+Se puede obtener descargando el siguiente ![archivo .pdf](./archivos_readme/manual_usuario_TCGA-Dashboard.pdf).
