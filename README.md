@@ -22,13 +22,16 @@ En ambos casos la aplicación web proporciona la posibilidad de modificar los pa
 3. Descargar los archivos de la rama *main* a través del botón Code/Código. Hay dos opciones:
    - 3.1. Pulsar en **Download zip** y descomprimir el archivo en local.
    - 3.2. Clonar el repositorio en una carpeta local cualquiera desde la consola de comandos a través del siguiente comando: `git clone https://github.com/juanmapr12/TCGA-Dashboard.git`. Para este segundo paso es necesario tener Git instalado en el equipo local. Si no se tiene instalado, se deja por aquí un [manual de instalación](https://git-scm.com/book/es/v2/Inicio---Sobre-el-Control-de-Versiones-Instalacion-de-Git).
-   ![Foto local](./archivos_readme/mi_github.png)
    
 4. Abrimos RStudio Desktop y en la barra de menú seleccionamos la opción **File − > New Project**. Dentro del recuadro que nos ha aparecido seleccionamos la segunda opción, *Existing Directory*. Después, pulsando en Browse buscamos la carpeta de nombre “TCGA-Dashboard” que acabamos de descargar en nuestro equipo local, y una vez seleccionada pulsamos finalmente en **Create Project**.
+
+![Paso 4](./archivos_readme/create_project.png)
 
 5. Una vez se tiene el proyecto creado, dentro de RStudio nos vamos a la ventana **“Files / Plots / Packages / Help / Viewer”**. En el primer panel llamado Files (o Archivos) deberían aparecer los archivos del proyecto. Clicamos en app.R, y se nos abre el fichero en una nueva ventana (llamada Source o Fuente) dentro de la interfaz de RStudio.
 
 6. En la esquina superior derecha de esta ventana debe aparecer una opción llamada **Run App** junto con el conocido símbolo de ejecutar a su izquierda. Basta entonces con pulsar el botón, dejar que se carguen los distintos scripts que actúan como archivos fuente dentro de la aplicación (uno de ellos es dependencias.R, que automáticamente detecta si las librerías necesarias están instaladas o no, y en caso de esto último las instala) y esperar.
+
+![Últimos pasos](./archivos_readme/interfaz_rstudio.png)
 
 Una vez seguidos estos pasos, ya tendremos a la aplicación corriendo en local. Si surgiese algún problema durante la instalación o durante la ejecución de la aplicación, se recomienda borrar todos los objetos del espacio de trabajo (icono de la escoba en la ventana de la esquina inferior derecha), restaurar R (desde el menú: **Session -> Restart R**) y volver a ejecutar el último paso.
 
