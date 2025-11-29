@@ -35,7 +35,7 @@ En ambos casos la aplicación web proporciona la posibilidad de modificar los pa
 
 Una vez seguidos estos pasos, ya tendremos a la aplicación corriendo en local. Si surgiese algún problema durante la instalación o durante la ejecución de la aplicación, se recomienda borrar todos los objetos del espacio de trabajo (icono de la escoba en la ventana de la esquina inferior derecha), restaurar R (desde el menú: **Session -> Restart R**) y volver a ejecutar el último paso.
 
-Para cualquier otra duda, contactar con ![](mailto:juanmanuel.pr.2012@gmail.com)
+Para cualquier otra duda, contactar con [mi correo](mailto:juanmanuel.pr.2012@gmail.com)
 
 ## 📗 Manual de usuario
 
