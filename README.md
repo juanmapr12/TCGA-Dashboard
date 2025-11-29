@@ -29,7 +29,7 @@ En ambos casos la aplicación web proporciona la posibilidad de modificar los pa
 
 6. En la esquina superior derecha de esta ventana debe aparecer una opción llamada **Run App** junto con el conocido símbolo de ejecutar a su izquierda. Basta entonces con pulsar el botón, dejar que se carguen los distintos scripts que actúan como archivos fuente dentro de la aplicación (uno de ellos es dependencias.R, que automáticamente detecta si las librerías necesarias están instaladas o no, y en caso de esto último las instala) y esperar.
 
-| Imagen 1                | Imagen 2                |
+| Paso 4               | Pasos 5 y 6               |
 |-------------------------|-------------------------|
 | ![](./archivos_readme/create_project.png)    | ![](./archivos_readme/interfaz_rstudio.png)    |
 
