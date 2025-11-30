@@ -15,9 +15,9 @@ En ambos casos la aplicación web proporciona la posibilidad de modificar los pa
 
 ## 📘 Manual de instalación de la app
 
-1. Instalar R. Se recomienda la versión [4.4.1](https://cran.r-project.org/bin/windows/base/old/4.4.1/)
+1. **Instalar R.** Se recomienda la versión [4.4.1](https://cran.r-project.org/bin/windows/base/old/4.4.1/)
 
-2. Instalar RStudio Desktop. Se recomienda la versión [2024.12.0](https://dailies.rstudio.com/version/2024.12.0+467/), aunque se cree que una versión superior no dará ningún tipo de problema.
+2. **Instalar RStudio Desktop.** Se recomienda la versión [2024.12.0](https://dailies.rstudio.com/version/2024.12.0+467/), aunque se cree que una versión superior no dará ningún tipo de problema.
 
 3. Descargar los archivos de la rama *main* a través del botón Code/Código. Hay dos opciones:
    - 3.1. Pulsar en **Download zip** y descomprimir el archivo en local.
